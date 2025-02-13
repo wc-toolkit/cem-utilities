@@ -28,7 +28,7 @@
     "lint:fix": "eslint 'src/**/*.ts' --fix",
     "test": "vitest --run",
     "prepare": "husky",
-    "release": "pnpm run build && changeset publish && npm publish --access=public"
+    "release": "pnpm run build && changeset publish --access=public"
   },
   "author": "",
   "license": "MIT",
@@ -63,5 +63,9 @@
   "lint-staged": {
     "*.ts": "eslint --cache --fix",
     "*.--write": "prettier --write"
+  },
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
   }
 }
