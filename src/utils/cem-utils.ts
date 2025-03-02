@@ -169,7 +169,7 @@ export function getComponentEventsWithType<T extends ComponentEvent>(
       ? type || "CustomEvent"
       : DOM_EVENTS.has(type)
         ? type
-        : type
+        : type && type !== "CustomEvent"
           ? `CustomEvent<${type}>`
           : "CustomEvent";
 
