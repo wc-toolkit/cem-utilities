@@ -1,5 +1,11 @@
 # @wc-toolkit/cem-utilities
 
+## 1.0.2
+
+### Patch Changes
+
+- 8dc12a4: Fixed returned type from `getComponentEventsWithType` when the CEM type is `CustomEvent`
+
 ## 1.0.1
 
 ### Patch Changes
