@@ -1,5 +1,11 @@
 # @wc-toolkit/cem-utilities
 
+## 1.1.0
+
+### Minor Changes
+
+- 3c97cf0: Added funtions for getting mixins
+
 ## 1.0.2
 
 ### Patch Changes
