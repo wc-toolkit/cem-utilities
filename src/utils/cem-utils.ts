@@ -1,5 +1,5 @@
 import type * as cem from "custom-elements-manifest";
-import type { Component, ComponentEvent, Method, Property } from "./types";
+import type { Component, ComponentEvent, Method, Property, Mixin } from "./types";
 
 export const JS_TYPES = new Set([
   "any",
@@ -53,6 +53,26 @@ export function getAllComponents<T extends Component>(
     ((customElementsManifest as cem.Package).modules
       ?.map((mod) => mod.declarations
         ?.filter((d) => (d as cem.CustomElement).customElement)
+        ?.flat()
+      )
+      ?.flat() || []
+    ).filter((x) => x && !exclude?.includes(x.name)) as unknown as T[]);
+}
+
+/**
+ * Gets a list of all mixins from a Custom Elements Manifest object
+ * @param customElementsManifest
+ * @param exclude an array of component names to exclude
+ * @returns {Array<Mixin>} an array of components
+ */
+export function getAllMixins<T extends Mixin>(
+  customElementsManifest: unknown,
+  exclude: string[] = []
+): T[] {
+  return (
+    ((customElementsManifest as cem.Package).modules
+      ?.map((mod) => mod.declarations
+        ?.filter((d) => (d as cem.Declaration).kind === "mixin")
         ?.flat()
       )
       ?.flat() || []
