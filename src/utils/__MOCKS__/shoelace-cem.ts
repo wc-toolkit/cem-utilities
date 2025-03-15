@@ -7,7 +7,8 @@ export const shoelaceCem = {
   modules: [
     {
       kind: "javascript-module",
-      path: "components/alert/alert.js",
+      path: "dist/components/alert/alert.component.js",
+      typeDefinitionPath: "dist/components/alert/alert.component.d.ts",
       declarations: [
         {
           kind: "class",
@@ -18411,6 +18412,22 @@ export const shoelaceCem = {
           declaration: {
             name: "SlVisuallyHidden",
             module: "components/visually-hidden/visually-hidden.js",
+          },
+        },
+      ],
+    },
+    {
+      kind: "javascript-module",
+      path: "dist/components/alert/alert.js",
+      deprecated: false,
+      declarations: [],
+      exports: [
+        {
+          kind: "custom-element-definition",
+          name: "sl-alert",
+          declaration: {
+            name: "SlAlert",
+            module: "dist/components/alert/alert.component.js",
           },
         },
       ],
