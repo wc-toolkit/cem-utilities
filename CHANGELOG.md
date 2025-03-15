@@ -1,5 +1,12 @@
 # @wc-toolkit/cem-utilities
 
+## 1.2.0
+
+### Minor Changes
+
+- a08d4e2: Added module paths to Component object for easier access
+- 6a62963: Added caching for better performance
+
 ## 1.1.0
 
 ### Minor Changes
