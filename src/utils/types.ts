@@ -1,38 +1,47 @@
 import type * as cem from "custom-elements-manifest";
 
+export type ExtComponent = cem.CustomElement & Record<string, unknown> & {
+  /** Path to the component's source module */
+  modulePath?: string;
+  /** Path to the component's definition */
+  definitionPath?: string;
+  /** Path to the component's type definition (if different than the source module) */
+  typeDefinitionPath?: string;
+};
+
 /** A generic extension of the CEM `CustomElement` type to allow for strongly typing your custom data */
-export type Component<T = Record<string, unknown>> = cem.CustomElement & T;
+export type Component<T = Record<string, unknown>> = ExtComponent & T;
 
 /** A generic extension of the CEM `MixinDeclaration` type to allow for strongly typing your custom data */
-export type Mixin<T = Record<string, unknown>> = cem.MixinDeclaration & T;
+export type Mixin<T = Record<string, unknown>> = cem.MixinDeclaration & Record<string, unknown> & T;
 
 /** A generic extension of the CEM `Attribute` type to allow for strongly typing your custom data */
-export type Attribute<T = Record<string, unknown>> = cem.Attribute & T;
+export type Attribute<T = Record<string, unknown>> = cem.Attribute & Record<string, unknown> & T;
 
 /** A generic extension of the CEM `ClassField` type to allow for strongly typing your custom data */
-export type Property<T = Record<string, unknown>> = cem.ClassField & T;
+export type Property<T = Record<string, unknown>> = cem.ClassField & Record<string, unknown> & T;
 
 /** A generic extension of the CEM `CssCustomProperty` type to allow for strongly typing your custom data */
 export type CssCustomProperty<T = Record<string, unknown>> =
-  cem.CssCustomProperty & T;
+  cem.CssCustomProperty & Record<string, unknown> & T;
 
 /** A generic extension of the CEM `CssCustomState` type to allow for strongly typing your custom data */
-export type CssCustomState<T = Record<string, unknown>> = cem.CssCustomState &
+export type CssCustomState<T = Record<string, unknown>> = cem.CssCustomState & Record<string, unknown> &
   T;
 
 /** A generic extension of the CEM `CssPart` type to allow for strongly typing your custom data */
-export type CssPart<T = Record<string, unknown>> = cem.CssPart & T;
+export type CssPart<T = Record<string, unknown>> = cem.CssPart & Record<string, unknown> & T;
 
 /** A generic extension of the CEM `Event` type to allow for strongly typing your custom data */
-export type ComponentEvent<T = Record<string, unknown>> = cem.Event & T;
+export type ComponentEvent<T = Record<string, unknown>> = cem.Event & Record<string, unknown> & T;
 
 /** A generic extension of the CEM `ClassMethod` type to allow for strongly typing your custom data */
-export type Method<T = Record<string, unknown>> = cem.ClassMethod & {
+export type Method<T = Record<string, unknown>> = cem.ClassMethod & Record<string, unknown> & {
   type: cem.Type;
 } & T;
 
 /** A generic extension of the CEM `Slot` type to allow for strongly typing your custom data */
-export type Slot<T = Record<string, unknown>> = cem.Slot & T;
+export type Slot<T = Record<string, unknown>> = cem.Slot & Record<string, unknown> & T;
 
 /** A combination of the Attribute and ClassField types from the custom elements manifest */
 export type AttributeAndProperty = {

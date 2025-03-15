@@ -1,5 +1,11 @@
 import type * as cem from "custom-elements-manifest";
-import type { Component, ComponentEvent, Method, Property, Mixin } from "./types";
+import type {
+  Component,
+  ComponentEvent,
+  Method,
+  Property,
+  Mixin,
+} from "./types";
 
 export const JS_TYPES = new Set([
   "any",
@@ -39,6 +45,10 @@ export const DOM_EVENTS = new Set([
   "WheelEvent",
 ]);
 
+const definitionExports = new Map<string, string>();
+let components: unknown[] = [];
+let manifest: unknown;
+
 /**
  * Gets a list of all components from a Custom Elements Manifest object
  * @param customElementsManifest
@@ -49,14 +59,43 @@ export function getAllComponents<T extends Component>(
   customElementsManifest: unknown,
   exclude: string[] = []
 ): T[] {
-  return (
-    ((customElementsManifest as cem.Package).modules
-      ?.map((mod) => mod.declarations
-        ?.filter((d) => (d as cem.CustomElement).customElement)
-        ?.flat()
-      )
-      ?.flat() || []
-    ).filter((x) => x && !exclude?.includes(x.name)) as unknown as T[]);
+  if (areObjectsEqual(customElementsManifest as object, manifest as object)) {
+    return components as T[];
+  }
+
+  resetCache();
+  manifest = customElementsManifest;
+  getAllDefinitionExports(customElementsManifest);
+
+  (manifest as cem.Package).modules.forEach((module) => {
+    const ces = module.declarations?.filter(
+      (d) => (d as cem.CustomElementDeclaration).customElement
+    ) as unknown as Component[];
+
+    if (ces?.length) {
+      ces.forEach((ce) => {
+        if (exclude?.includes(ce.name)) {
+          return;
+        }
+
+        ce.modulePath = module.path;
+        ce.definitionPath = definitionExports.get(ce.name);
+        if ("typeDefinitionPath" in module && module.typeDefinitionPath) {
+          ce.typeDefinitionPath = module.typeDefinitionPath as string;
+        }
+
+        components.push(ce);
+      });
+    }
+  });
+
+  return components as T[];
+}
+
+function resetCache() {
+  components = [];
+  manifest = undefined;
+  definitionExports.clear();
 }
 
 /**
@@ -70,13 +109,14 @@ export function getAllMixins<T extends Mixin>(
   exclude: string[] = []
 ): T[] {
   return (
-    ((customElementsManifest as cem.Package).modules
-      ?.map((mod) => mod.declarations
-        ?.filter((d) => (d as cem.Declaration).kind === "mixin")
-        ?.flat()
+    (customElementsManifest as cem.Package).modules
+      ?.map((mod) =>
+        mod.declarations
+          ?.filter((d) => (d as cem.Declaration).kind === "mixin")
+          ?.flat()
       )
       ?.flat() || []
-    ).filter((x) => x && !exclude?.includes(x.name)) as unknown as T[]);
+  ).filter((x) => x && !exclude?.includes(x.name)) as unknown as T[];
 }
 
 /**
@@ -114,7 +154,9 @@ export function getComponentByTagName<T extends Component>(
  * @param component CEM component/declaration object
  * @returns {Array<Property>} an array of public properties for a given component
  */
-export function getComponentPublicProperties<T extends Property>(component: Component) {
+export function getComponentPublicProperties<T extends Property>(
+  component: Component
+) {
   return (component?.members?.filter(
     (member) =>
       member.kind === "field" &&
@@ -157,8 +199,8 @@ export function getComponentPublicMethods<T extends Method>(
       };
 
       return m;
-    })
-  ) as T[];
+    }) as T[]
+  );
 }
 
 /** The type used to define the configuration options for the `getComponentEventsWithType` function */
@@ -237,4 +279,64 @@ export function getCustomEventDetailTypes(
       ?.filter((e) => e !== undefined && !e?.startsWith("HTML")) || [];
 
   return (types?.length ? [...new Set(types)] : []) as string[];
+}
+
+export function getAllDefinitionExports(customElementsManifest: unknown) {
+  (customElementsManifest as cem.Package).modules.forEach((mod) => {
+    const defExports = mod?.exports?.filter(
+      (e) => e.kind === "custom-element-definition"
+    );
+    if (defExports?.length) {
+      defExports.forEach((e) => {
+        if (e.declaration.name) {
+          definitionExports.set(e.declaration.name, mod.path);
+        }
+      });
+    }
+  });
+}
+
+export function areObjectsEqual(obj1: unknown, obj2: unknown): boolean {
+  // Quick reference equality check
+  if (obj1 === obj2) return true;
+
+  // Type checks
+  if (
+    obj1 === null ||
+    obj2 === null ||
+    typeof obj1 !== "object" ||
+    typeof obj2 !== "object"
+  ) return false;
+
+  // Handle arrays efficiently
+  if (Array.isArray(obj1) && Array.isArray(obj2)) {
+    if (obj1.length !== obj2.length) return false;
+    return obj1.every((item, index) => areObjectsEqual(item, obj2[index]));
+  }
+
+  const keys1 = Object.keys(obj1 as object);
+  const keys2 = Object.keys(obj2 as object);
+
+  // Quick length check
+  if (keys1.length !== keys2.length) return false;
+  
+  // Check if all keys from obj2 exist in obj1
+  if (!keys2.every(key => key in (obj1 as object))) return false;
+
+  // Check values
+  return keys1.every(key => {
+    const val1 = (obj1 as Record<string, unknown>)[key];
+    const val2 = (obj2 as Record<string, unknown>)[key];
+    
+    // Handle null values
+    if (val1 === null && val2 === null) return true;
+    if (val1 === null || val2 === null) return false;
+    
+    // Handle object type values
+    if (typeof val1 === "object" && typeof val2 === "object") {
+      return areObjectsEqual(val1, val2);
+    }
+    
+    return val1 === val2;
+  });
 }

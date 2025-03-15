@@ -8,8 +8,8 @@ import {
   getComponentPublicProperties,
   getCustomEventDetailTypes,
 } from "./cem-utils";
-import { shoelaceCem } from "./__MOCKS__/shoelace-cem" with { type: 'json' };
-import { guiCem } from "./__MOCKS__/gui-cem" with { type: 'json' };
+import { shoelaceCem } from "./__MOCKS__/shoelace-cem" with { type: "json" };
+import { guiCem } from "./__MOCKS__/gui-cem" with { type: "json" };
 
 describe("getAlComponents", () => {
   test("should return one component from `guiCem`", () => {
@@ -72,6 +72,22 @@ describe("getComponentByClassName", () => {
 
     // Assert
     expect(component).toBeUndefined();
+  });
+
+  test("should return resolve module paths for a component", () => {
+    // Arrange
+
+    // Act
+    const component = getComponentByClassName(shoelaceCem, "SlAlert");
+
+    // Assert
+    expect(component?.modulePath).toBe(
+      "dist/components/alert/alert.component.js"
+    );
+    expect(component?.typeDefinitionPath).toBe(
+      "dist/components/alert/alert.component.d.ts"
+    );
+    expect(component?.definitionPath).toBe("dist/components/alert/alert.js");
   });
 });
 
@@ -151,7 +167,9 @@ describe("getPublicMethods", () => {
     const validityEvent = methods.find((m) => m.name === "setCustomValidity");
 
     // Assert
-    expect(validityEvent?.type.text).toEqual('setCustomValidity(message: string) => void');
+    expect(validityEvent?.type.text).toEqual(
+      "setCustomValidity(message: string) => void"
+    );
   });
 });
 
@@ -193,7 +211,9 @@ describe("getComponentEventsWithType", () => {
     });
 
     // Assert
-    expect(events[1].type.text).toEqual("CustomEvent<'value 1' | 'value 2' | 'value 3' | 'value 4'>");
+    expect(events[1].type.text).toEqual(
+      "CustomEvent<'value 1' | 'value 2' | 'value 3' | 'value 4'>"
+    );
   });
 });
 
@@ -204,7 +224,7 @@ describe("getCustomEventDetailTypes", () => {
 
     // Act
     const eventTypes = getCustomEventDetailTypes(component!);
-    
+
     // Assert
     expect(eventTypes?.length).toEqual(2);
   });

@@ -11,7 +11,6 @@ describe("getComponentDetailsTemplate", () => {
     // Act
     const result = getComponentDetailsTemplate(alert);
 
-    console.log(result);
     // Assert
 
     expect(result.includes('### Attributes & Properties')).toBeTruthy();
