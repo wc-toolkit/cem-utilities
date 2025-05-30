@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { getComponentDetailsTemplate, getMemberDescription } from "./description";
-import { shoelaceCem } from "./__MOCKS__/shoelace-cem" with { type: 'json' };
+import {
+  getComponentDetailsTemplate,
+  getMemberDescription,
+  getAttrsAndProps,
+} from "./description";
+import { shoelaceCem } from "./__MOCKS__/shoelace-cem" with { type: "json" };
 import { getComponentByClassName } from "./cem-utils";
 
 describe("getComponentDetailsTemplate", () => {
@@ -13,11 +17,31 @@ describe("getComponentDetailsTemplate", () => {
 
     // Assert
 
-    expect(result.includes('### Attributes & Properties')).toBeTruthy();
-    expect(result.includes('- `sl-show`: Emitted when the alert opens.')).toBeTruthy();
-    expect(result.includes('- `show() => void`: Shows the alert.')).toBeTruthy();
-    expect(result.includes('- `(default)`: The alert\'s main content.')).toBeTruthy();
-    expect(result.includes('### CSS States')).toBeFalsy();
+    expect(result.includes("### Attributes & Properties")).toBeTruthy();
+    expect(
+      result.includes("- `sl-show`: Emitted when the alert opens.")
+    ).toBeTruthy();
+    expect(
+      result.includes("- `show() => void`: Shows the alert.")
+    ).toBeTruthy();
+    expect(
+      result.includes("- `(default)`: The alert's main content.")
+    ).toBeTruthy();
+    expect(result.includes("### CSS States")).toBeFalsy();
+  });
+});
+
+describe("getAttrsAndProps", () => {
+  const alert = getComponentByClassName(shoelaceCem, "SlAlert");
+
+  test("should return an empty array when no attributes or properties exist", () => {
+    // Arrange
+
+    // Act
+    const result = getAttrsAndProps(alert);
+
+    // Assert
+    expect(result.length).toEqual(7);
   });
 });
 

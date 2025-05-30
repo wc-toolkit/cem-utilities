@@ -132,8 +132,8 @@ export function getComponentDetailsTemplate(
  * @returns {Attribute[] | Property[] | ComponentEvent[] | Method[] | Slot[] | CssCustomProperty[] | CssPart[] | CssCustomState[] | AttributeAndProperty[]} An array of the API details
  */
 export function getApiByOrderOption(
-  component: Component,
-  api: ApiOrderOption
+  component?: Component,
+  api?: ApiOrderOption
 ):
   | Attribute[]
   | Property[]
@@ -144,6 +144,10 @@ export function getApiByOrderOption(
   | CssPart[]
   | CssCustomState[]
   | AttributeAndProperty[] {
+  if (!component || !api) {
+    return [];
+  }
+
   switch (api) {
     case "attributes":
       return component.attributes || ([] as Attribute[]);
@@ -180,9 +184,13 @@ export function getApiByOrderOption(
  * @returns string
  */
 export function getMainComponentDescription(
-  component: Component,
+  component?: Component,
   descriptionSrc?: "description" | "summary" | (string & {})
 ): string {
+  if (!component) {
+    return "";
+  }
+
   let description =
     (descriptionSrc
       ? (component[descriptionSrc] as string)
@@ -205,7 +213,11 @@ export function getMainComponentDescription(
  * @param {Component} component
  * @returns {AttributeAndProperty[]} An array of attributes and properties
  */
-export function getAttrsAndProps(component: Component): AttributeAndProperty[] {
+export function getAttrsAndProps(component?: Component): AttributeAndProperty[] {
+  if (!component) {
+    return [];
+  }
+
   const attributes =
     component.attributes?.map((attr) => {
       return {
@@ -249,7 +261,11 @@ export function getAttrsAndProps(component: Component): AttributeAndProperty[] {
  * @param component CEM component/declaration object
  * @returns {Property[]} An array of properties
  */
-export function getPropertyOnlyFields(component: Component): Property[] {
+export function getPropertyOnlyFields(component?: Component): Property[] {
+  if (!component) {
+    return [];
+  }
+
   const props = getComponentPublicProperties(component) || [];
   const attrs = component.attributes?.map((attr) => attr.name) || [];
   return props?.filter(
