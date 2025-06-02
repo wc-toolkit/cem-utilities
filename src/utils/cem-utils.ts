@@ -56,16 +56,23 @@ let manifest: unknown;
  * @returns {Array<Component>} an array of components
  */
 export function getAllComponents<T extends Component>(
-  customElementsManifest: unknown,
+  customElementsManifest?: unknown,
   exclude: string[] = []
 ): T[] {
-  if (areObjectsEqual(customElementsManifest as object, manifest as object)) {
+  if (!customElementsManifest) {
+    return [];
+  }
+
+  if (
+    !customElementsManifest ||
+    areObjectsEqual(customElementsManifest as object, manifest as object)
+  ) {
     return components as T[];
   }
 
   resetCache();
   manifest = customElementsManifest;
-  getAllDefinitionExports(customElementsManifest);
+  setAllDefinitionExports(customElementsManifest);
 
   (manifest as cem.Package).modules.forEach((module) => {
     const ces = module.declarations?.filter(
@@ -105,9 +112,13 @@ function resetCache() {
  * @returns {Array<Mixin>} an array of components
  */
 export function getAllMixins<T extends Mixin>(
-  customElementsManifest: unknown,
+  customElementsManifest?: unknown,
   exclude: string[] = []
 ): T[] {
+  if (!customElementsManifest) {
+    return [];
+  }
+
   return (
     (customElementsManifest as cem.Package).modules
       ?.map((mod) =>
@@ -126,7 +137,7 @@ export function getAllMixins<T extends Mixin>(
  * @returns {Component}
  */
 export function getComponentByClassName<T extends Component>(
-  customElementsManifest: unknown,
+  customElementsManifest?: unknown,
   className?: string
 ): T | undefined {
   return getAllComponents<T>(customElementsManifest).find(
@@ -141,7 +152,7 @@ export function getComponentByClassName<T extends Component>(
  * @returns {Component}
  */
 export function getComponentByTagName<T extends Component>(
-  customElementsManifest: unknown,
+  customElementsManifest?: unknown,
   tagName?: string
 ): T | undefined {
   return getAllComponents<T>(customElementsManifest).find(
@@ -155,8 +166,12 @@ export function getComponentByTagName<T extends Component>(
  * @returns {Array<Property>} an array of public properties for a given component
  */
 export function getComponentPublicProperties<T extends Property>(
-  component: Component
+  component?: Component
 ) {
+  if (!component || !component.members) {
+    return [];
+  }
+
   return (component?.members?.filter(
     (member) =>
       member.kind === "field" &&
@@ -173,8 +188,12 @@ export function getComponentPublicProperties<T extends Property>(
  * @returns {Array<Method>} an array of methods for a given component
  */
 export function getComponentPublicMethods<T extends Method>(
-  component: Component
+  component?: Component
 ): T[] {
+  if (!component || !component.members) {
+    return [];
+  }
+
   const getParameter = (p: cem.Parameter) =>
     p.name + getParamType(p) + getParamDefaultValue(p);
   const getParamType = (p: cem.Parameter) =>
@@ -218,9 +237,13 @@ export type EventOptions = {
  * @returns {Array<ComponentEvent>} an array of events for a given component
  */
 export function getComponentEventsWithType<T extends ComponentEvent>(
-  component: cem.CustomElement,
+  component?: cem.CustomElement,
   options: EventOptions = {}
 ): T[] {
+  if (!component || !component.events) {
+    return [];
+  }
+
   const events = component?.events?.map((e) => {
     const type: string =
       (e as unknown as Record<string, cem.Type>)[
@@ -255,9 +278,13 @@ export function getComponentEventsWithType<T extends ComponentEvent>(
  * @returns {string[]} A string array of event types for a given component
  */
 export function getCustomEventDetailTypes(
-  component: Component,
+  component?: Component,
   excludedTypes?: string[]
 ): string[] {
+  if (!component || !component.events) {
+    return [];
+  }
+
   const types =
     component?.events
       ?.map((e) => {
@@ -281,7 +308,11 @@ export function getCustomEventDetailTypes(
   return (types?.length ? [...new Set(types)] : []) as string[];
 }
 
-export function getAllDefinitionExports(customElementsManifest: unknown) {
+export function setAllDefinitionExports(customElementsManifest?: unknown) {
+  if (!customElementsManifest) {
+    return;
+  }
+  
   (customElementsManifest as cem.Package).modules.forEach((mod) => {
     const defExports = mod?.exports?.filter(
       (e) => e.kind === "custom-element-definition"
@@ -306,7 +337,8 @@ export function areObjectsEqual(obj1: unknown, obj2: unknown): boolean {
     obj2 === null ||
     typeof obj1 !== "object" ||
     typeof obj2 !== "object"
-  ) return false;
+  )
+    return false;
 
   // Handle arrays efficiently
   if (Array.isArray(obj1) && Array.isArray(obj2)) {
@@ -319,24 +351,24 @@ export function areObjectsEqual(obj1: unknown, obj2: unknown): boolean {
 
   // Quick length check
   if (keys1.length !== keys2.length) return false;
-  
+
   // Check if all keys from obj2 exist in obj1
-  if (!keys2.every(key => key in (obj1 as object))) return false;
+  if (!keys2.every((key) => key in (obj1 as object))) return false;
 
   // Check values
-  return keys1.every(key => {
+  return keys1.every((key) => {
     const val1 = (obj1 as Record<string, unknown>)[key];
     const val2 = (obj2 as Record<string, unknown>)[key];
-    
+
     // Handle null values
     if (val1 === null && val2 === null) return true;
     if (val1 === null || val2 === null) return false;
-    
+
     // Handle object type values
     if (typeof val1 === "object" && typeof val2 === "object") {
       return areObjectsEqual(val1, val2);
     }
-    
+
     return val1 === val2;
   });
 }
