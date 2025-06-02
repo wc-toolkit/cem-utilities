@@ -332,7 +332,10 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
         "Properties that can be applied to this element using JavaScript.",
       template: (api?: Property[]) =>
         api
-          ?.map((prop) => `- \`${prop.name}\`: ${prop.description}`)
+          ?.map(
+            (prop) =>
+              `- \`${prop.name}\`: ${prop.readonly ? "(readonly) " : ""}${prop.description}`
+          )
           .join("\n") || "",
     },
     attrsAndProps: {
@@ -348,7 +351,7 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
                 : `\`${prop.attrName}\`/\`${prop.propName}\``;
             return `- ${getName(prop)}: ${prop.description} ${
               !prop.attrName ? "(property only)" : ""
-            }`;
+            }${prop.readonly ? " (readonly)" : ""}`;
           })
           .join("\n") || "",
     },
@@ -358,7 +361,10 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
         "Properties that can be applied to this element using JavaScript.",
       template: (api?: Property[]) =>
         api
-          ?.map((prop) => `- \`${prop.name}\`: ${prop.description}`)
+          ?.map(
+            (prop) =>
+              `- \`${prop.name}\`: ${prop.readonly ? "(readonly) " : ""}${prop.description}`
+          )
           .join("\n") || "",
     },
     events: {
