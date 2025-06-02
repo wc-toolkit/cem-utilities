@@ -105,7 +105,7 @@ export function getComponentDetailsTemplate(
   apiOptions.order?.forEach((key) => {
     const componentContent = getApiByOrderOption(component, key);
     const api = apiOptions.apis ? apiOptions.apis[key] : undefined;
-    if (api && componentContent.length) {
+    if (api && componentContent?.length) {
       description += `\n\n#### ${api.heading}`;
       description += api.description ? `\n\n${api.description}` : "";
       description += api.template
