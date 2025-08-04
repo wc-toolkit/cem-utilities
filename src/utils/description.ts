@@ -114,7 +114,7 @@ export function getComponentDetailsTemplate(
     const api = apiOptions.apis ? apiOptions.apis[key] : undefined;
     
     if (api && componentContent?.length) {
-      description += `\n\n#### ${api.heading}`;
+      description += `\n\n${headingLevel} ${api.heading}`;
       description += api.description ? `\n\n${api.description}` : "";
       description += api.template
         ? // @ts-expect-error componentContent takes many shapes
