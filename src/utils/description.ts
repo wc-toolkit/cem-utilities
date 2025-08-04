@@ -112,8 +112,9 @@ export function getComponentDetailsTemplate(
   apiOptions.order?.forEach((key) => {
     const componentContent = getApiByOrderOption(component, key);
     const api = apiOptions.apis ? apiOptions.apis[key] : undefined;
-    if (api && componentContent.length) {
-      description += `\n\n${headingLevel} ${api.heading}`;
+    
+    if (api && componentContent?.length) {
+      description += `\n\n#### ${api.heading}`;
       description += api.description ? `\n\n${api.description}` : "";
       description += api.template
         ? // @ts-expect-error componentContent takes many shapes
@@ -139,8 +140,8 @@ export function getComponentDetailsTemplate(
  * @returns {Attribute[] | Property[] | ComponentEvent[] | Method[] | Slot[] | CssCustomProperty[] | CssPart[] | CssCustomState[] | AttributeAndProperty[]} An array of the API details
  */
 export function getApiByOrderOption(
-  component: Component,
-  api: ApiOrderOption
+  component?: Component,
+  api?: ApiOrderOption
 ):
   | Attribute[]
   | Property[]
@@ -151,6 +152,10 @@ export function getApiByOrderOption(
   | CssPart[]
   | CssCustomState[]
   | AttributeAndProperty[] {
+  if (!component || !api) {
+    return [];
+  }
+
   switch (api) {
     case "attributes":
       return component.attributes || ([] as Attribute[]);
@@ -187,9 +192,13 @@ export function getApiByOrderOption(
  * @returns string
  */
 export function getMainComponentDescription(
-  component: Component,
+  component?: Component,
   descriptionSrc?: "description" | "summary" | (string & {})
 ): string {
+  if (!component) {
+    return "";
+  }
+
   let description =
     (descriptionSrc
       ? (component[descriptionSrc] as string)
@@ -212,7 +221,11 @@ export function getMainComponentDescription(
  * @param {Component} component
  * @returns {AttributeAndProperty[]} An array of attributes and properties
  */
-export function getAttrsAndProps(component: Component): AttributeAndProperty[] {
+export function getAttrsAndProps(component?: Component): AttributeAndProperty[] {
+  if (!component) {
+    return [];
+  }
+
   const attributes =
     component.attributes?.map((attr) => {
       return {
@@ -256,7 +269,11 @@ export function getAttrsAndProps(component: Component): AttributeAndProperty[] {
  * @param component CEM component/declaration object
  * @returns {Property[]} An array of properties
  */
-export function getPropertyOnlyFields(component: Component): Property[] {
+export function getPropertyOnlyFields(component?: Component): Property[] {
+  if (!component) {
+    return [];
+  }
+
   const props = getComponentPublicProperties(component) || [];
   const attrs = component.attributes?.map((attr) => attr.name) || [];
   return props?.filter(
@@ -323,7 +340,10 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
         "Properties that can be applied to this element using JavaScript.",
       template: (api?: Property[]) =>
         api
-          ?.map((prop) => `- \`${prop.name}\`: ${prop.description}`)
+          ?.map(
+            (prop) =>
+              `- \`${prop.name}\`: ${prop.readonly ? "(readonly) " : ""}${prop.description}`
+          )
           .join("\n") || "",
     },
     attrsAndProps: {
@@ -339,7 +359,7 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
                 : `\`${prop.attrName}\`/\`${prop.propName}\``;
             return `- ${getName(prop)}: ${prop.description} ${
               !prop.attrName ? "(property only)" : ""
-            }`;
+            }${prop.readonly ? " (readonly)" : ""}`;
           })
           .join("\n") || "",
     },
@@ -349,7 +369,10 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
         "Properties that can be applied to this element using JavaScript.",
       template: (api?: Property[]) =>
         api
-          ?.map((prop) => `- \`${prop.name}\`: ${prop.description}`)
+          ?.map(
+            (prop) =>
+              `- \`${prop.name}\`: ${prop.readonly ? "(readonly) " : ""}${prop.description}`
+          )
           .join("\n") || "",
     },
     events: {

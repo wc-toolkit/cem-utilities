@@ -1,5 +1,19 @@
 # @wc-toolkit/cem-utilities
 
+## 1.3.0
+
+### Minor Changes
+
+- 9a8c54d: Make parameters for utility functions optional
+- e77366a: Add "readonly" tag to property descriptions
+
+## 1.2.0
+
+### Minor Changes
+
+- a08d4e2: Added module paths to Component object for easier access
+- 6a62963: Added caching for better performance
+
 ## 1.1.0
 
 ### Minor Changes
