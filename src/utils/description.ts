@@ -56,6 +56,7 @@ export type ComponentDescriptionOptions = {
   descriptionSrc?: "description" | "summary" | (string & {});
   /**
    * The type of the component description
+   * @deprecated This is unused will be removed in the next major version
    * @default "parsedType"
    */
   altType?: string;
@@ -74,6 +75,8 @@ export type ComponentDescriptionOptions = {
     cssParts?: ComponentApiOptions<CssPart>;
     cssState?: ComponentApiOptions<CssCustomState>;
   };
+  /** The section heading level to use for the component details sections */
+  sectionHeadingLevel?: number;
 };
 
 /**
@@ -102,11 +105,16 @@ export function getComponentDetailsTemplate(
     apiOptions.descriptionSrc
   );
 
+  const headingLevel = createMarkdownHeading(
+    apiOptions.sectionHeadingLevel || 2
+  );
+
   apiOptions.order?.forEach((key) => {
     const componentContent = getApiByOrderOption(component, key);
     const api = apiOptions.apis ? apiOptions.apis[key] : undefined;
+    
     if (api && componentContent?.length) {
-      description += `\n\n#### ${api.heading}`;
+      description += `\n\n${headingLevel} ${api.heading}`;
       description += api.description ? `\n\n${api.description}` : "";
       description += api.template
         ? // @ts-expect-error componentContent takes many shapes
@@ -425,3 +433,14 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
     },
   },
 };
+
+/**
+ * Returns a Markdown heading string for the given level and text.
+ * @param level The heading level (1-6)
+ * @param text The heading text
+ * @returns {string} The Markdown heading
+ */
+export function createMarkdownHeading(level: number): string {
+  const safeLevel = Math.min(Math.max(level, 1), 6);
+  return "#".repeat(safeLevel);
+}

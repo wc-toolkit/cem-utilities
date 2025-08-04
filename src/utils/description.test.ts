@@ -17,17 +17,12 @@ describe("getComponentDetailsTemplate", () => {
 
     // Assert
 
-    expect(result.includes("### Attributes & Properties")).toBeTruthy();
-    expect(
-      result.includes("- `sl-show`: Emitted when the alert opens.")
-    ).toBeTruthy();
-    expect(
-      result.includes("- `show() => void`: Shows the alert.")
-    ).toBeTruthy();
-    expect(
-      result.includes("- `(default)`: The alert's main content.")
-    ).toBeTruthy();
-    expect(result.includes("### CSS States")).toBeFalsy();
+
+    expect(result.includes('## Attributes & Properties')).toBeTruthy();
+    expect(result.includes('- `sl-show`: Emitted when the alert opens.')).toBeTruthy();
+    expect(result.includes('- `show() => void`: Shows the alert.')).toBeTruthy();
+    expect(result.includes('- `(default)`: The alert\'s main content.')).toBeTruthy();
+    expect(result.includes('## CSS States')).toBeFalsy();
   });
 });
 
