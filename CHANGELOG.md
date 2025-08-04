@@ -1,5 +1,15 @@
 # @wc-toolkit/cem-utilities
 
+## 1.4.0
+
+### Minor Changes
+
+- 918d073: Added new `sectionHeadingLevel` configuration option to control the API section heading levels
+
+### Patch Changes
+
+- 918d073: Deprecated `altType` config option as it doesn't do anything. this will be removed in the next major release.
+
 ## 1.3.0
 
 ### Minor Changes
