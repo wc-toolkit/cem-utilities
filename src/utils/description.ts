@@ -106,7 +106,7 @@ export function getComponentDetailsTemplate(
   );
 
   const headingLevel = createMarkdownHeading(
-    apiOptions.sectionHeadingLevel || 3
+    apiOptions.sectionHeadingLevel || 2
   );
 
   apiOptions.order?.forEach((key) => {
