@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type * as cem from "custom-elements-manifest";
 import type {
   Component,
@@ -166,11 +167,18 @@ export function getComponentByTagName<T extends Component>(
  * @returns {Array<Property>} an array of public properties for a given component
  */
 export function getComponentPublicProperties<T extends Property>(
-  component?: Component
+  component?: Component,
+  altType?: string
 ) {
   if (!component || !component.members) {
     return [];
   }
+
+  component.members?.forEach((member) => {
+    if (member.kind === "field" && altType) {
+      member.type = (member as any)[altType] || member.type;
+    }
+  });
 
   return (component?.members?.filter(
     (member) =>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   getComponentPublicMethods,
   getComponentPublicProperties,
@@ -56,7 +57,6 @@ export type ComponentDescriptionOptions = {
   descriptionSrc?: "description" | "summary" | (string & {});
   /**
    * The type of the component description
-   * @deprecated This is unused will be removed in the next major version
    * @default "parsedType"
    */
   altType?: string;
@@ -89,7 +89,7 @@ export type ComponentDescriptionOptions = {
 export function getComponentDetailsTemplate(
   component?: Component,
   options?: ComponentDescriptionOptions,
-  isJsDoc?: boolean
+  isJsDoc?: boolean,
 ) {
   if (!component) {
     throw new Error("Component is required");
@@ -97,22 +97,22 @@ export function getComponentDetailsTemplate(
 
   const apiOptions = deepMerge<ComponentDescriptionOptions>(
     defaultDescriptionOptions,
-    options
+    options,
   );
 
   let description = getMainComponentDescription(
     component,
-    apiOptions.descriptionSrc
+    apiOptions.descriptionSrc,
   );
 
   const headingLevel = createMarkdownHeading(
-    apiOptions.sectionHeadingLevel || 2
+    apiOptions.sectionHeadingLevel || 2,
   );
 
   apiOptions.order?.forEach((key) => {
-    const componentContent = getApiByOrderOption(component, key);
+    const componentContent = getApiByOrderOption(component, key, apiOptions.altType);
     const api = apiOptions.apis ? apiOptions.apis[key] : undefined;
-    
+
     if (api && componentContent?.length) {
       description += `\n\n${headingLevel} ${api.heading}`;
       description += api.description ? `\n\n${api.description}` : "";
@@ -141,7 +141,8 @@ export function getComponentDetailsTemplate(
  */
 export function getApiByOrderOption(
   component?: Component,
-  api?: ApiOrderOption
+  api?: ApiOrderOption,
+  altType?: string,
 ):
   | Attribute[]
   | Property[]
@@ -158,14 +159,17 @@ export function getApiByOrderOption(
 
   switch (api) {
     case "attributes":
+      component.attributes?.forEach(attr => {
+        attr.type = altType ? (attr as any)[altType] || attr.type : attr.type;
+      });
       return component.attributes || ([] as Attribute[]);
     case "properties":
-      return getComponentPublicProperties(component) || ([] as Property[]);
+      return getComponentPublicProperties(component, altType) || ([] as Property[]);
     case "attrsAndProps": {
-      return getAttrsAndProps(component);
+      return getAttrsAndProps(component, altType);
     }
     case "propsOnly": {
-      return getPropertyOnlyFields(component);
+      return getPropertyOnlyFields(component, altType);
     }
     case "events":
       return component.events || ([] as ComponentEvent[]);
@@ -193,7 +197,7 @@ export function getApiByOrderOption(
  */
 export function getMainComponentDescription(
   component?: Component,
-  descriptionSrc?: "description" | "summary" | (string & {})
+  descriptionSrc?: "description" | "summary" | (string & {}),
 ): string {
   if (!component) {
     return "";
@@ -221,7 +225,10 @@ export function getMainComponentDescription(
  * @param {Component} component
  * @returns {AttributeAndProperty[]} An array of attributes and properties
  */
-export function getAttrsAndProps(component?: Component): AttributeAndProperty[] {
+export function getAttrsAndProps(
+  component?: Component,
+  altType = 'parsedType'
+): AttributeAndProperty[] {
   if (!component) {
     return [];
   }
@@ -234,7 +241,7 @@ export function getAttrsAndProps(component?: Component): AttributeAndProperty[] 
         summary: attr.summary,
         description: attr.description,
         inheritedFrom: attr.inheritedFrom,
-        type: attr.type,
+        type: (attr as any)[altType] || attr.type,
         default: attr.default,
         deprecated: attr.deprecated,
         static: false,
@@ -253,7 +260,7 @@ export function getAttrsAndProps(component?: Component): AttributeAndProperty[] 
         summary: prop.summary,
         description: prop.description,
         inheritedFrom: prop.inheritedFrom,
-        type: prop.type,
+        type: (prop as any)[altType] || prop.type,
         default: prop.default,
         deprecated: prop.deprecated,
         static: prop.static,
@@ -269,15 +276,15 @@ export function getAttrsAndProps(component?: Component): AttributeAndProperty[] 
  * @param component CEM component/declaration object
  * @returns {Property[]} An array of properties
  */
-export function getPropertyOnlyFields(component?: Component): Property[] {
+export function getPropertyOnlyFields(component?: Component, altType?: string): Property[] {
   if (!component) {
     return [];
   }
 
-  const props = getComponentPublicProperties(component) || [];
+  const props = getComponentPublicProperties(component, altType) || [];
   const attrs = component.attributes?.map((attr) => attr.name) || [];
   return props?.filter(
-    (prop) => !attrs.includes(prop.name) || []
+    (prop) => !attrs.includes(prop.name) || [],
   ) as Property[];
 }
 
@@ -290,7 +297,7 @@ export function getPropertyOnlyFields(component?: Component): Property[] {
  */
 export function getMemberDescription(
   description?: string,
-  deprecated?: boolean | string
+  deprecated?: boolean | string,
 ) {
   if (!deprecated) {
     return description || "";
@@ -330,7 +337,7 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
                 ? `\`${attr.name}\``
                 : `\`${attr.name}\`/\`${attr.fieldName}\``;
 
-            return `- ${getName(attr)}: ${attr.description}`;
+            return `- ${getName(attr)}: ${attr.description}\n  - Type: \`${attr.type?.text}\``;
           })
           .join("\n") || "",
     },
@@ -342,7 +349,7 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
         api
           ?.map(
             (prop) =>
-              `- \`${prop.name}\`: ${prop.readonly ? "(readonly) " : ""}${prop.description}`
+            `- \`${prop.name}\`: ${prop.readonly ? "(readonly) " : ""}${prop.description}\n  - Type: \`${prop.type?.text}\``,
           )
           .join("\n") || "",
     },
@@ -359,7 +366,7 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
                 : `\`${prop.attrName}\`/\`${prop.propName}\``;
             return `- ${getName(prop)}: ${prop.description} ${
               !prop.attrName ? "(property only)" : ""
-            }${prop.readonly ? " (readonly)" : ""}`;
+            }${prop.readonly ? " (readonly)" : ""}\n  - Type: \`${prop.type?.text}\``;
           })
           .join("\n") || "",
     },
@@ -371,7 +378,7 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
         api
           ?.map(
             (prop) =>
-              `- \`${prop.name}\`: ${prop.readonly ? "(readonly) " : ""}${prop.description}`
+            `- \`${prop.name}\`: ${prop.readonly ? "(readonly) " : ""}${prop.description}\n  - Type: \`${prop.type?.text}\``,
           )
           .join("\n") || "",
     },
@@ -380,7 +387,7 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
       description: "Events that will be emitted by the component.",
       template: (api?: ComponentEvent[]) =>
         api
-          ?.map((event) => `- \`${event.name}\`: ${event.description}`)
+          ?.map((event) => `- \`${event.name}\`: ${event.description}\n  - Type: \`${event.type?.text}\``)
           .join("\n") || "",
     },
     methods: {
@@ -398,7 +405,7 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
       template: (api?: Slot[]) =>
         api
           ?.map(
-            (slot) => `- \`${slot.name || "(default)"}\`: ${slot.description}`
+            (slot) => `- \`${slot.name || "(default)"}\`: ${slot.description}`,
           )
           .join("\n") || "",
     },
@@ -409,7 +416,7 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
         api
           ?.map(
             (cssProp) =>
-              `- \`${cssProp.name}\`: ${cssProp.description} (default: \`${cssProp.default}\`)`
+              `- \`${cssProp.name}\`: ${cssProp.description} (default: \`${cssProp.default}\`)`,
           )
           .join("\n") || "",
     },
@@ -432,6 +439,7 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
           .join("\n") || "",
     },
   },
+  altType: 'parsedType'
 };
 
 /**
