@@ -1,5 +1,15 @@
 # @wc-toolkit/cem-utilities
 
+## 1.5.0
+
+### Minor Changes
+
+- f6f0971: Added `Types` section to descriptions for attributes, prperties, and events
+
+### Patch Changes
+
+- f6f0971: Undeprecated the `altType` property
+
 ## 1.4.1
 
 ### Patch Changes
