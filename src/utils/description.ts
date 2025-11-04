@@ -110,7 +110,11 @@ export function getComponentDetailsTemplate(
   );
 
   apiOptions.order?.forEach((key) => {
-    const componentContent = getApiByOrderOption(component, key, apiOptions.altType);
+    const componentContent = getApiByOrderOption(
+      component,
+      key,
+      apiOptions.altType,
+    );
     const api = apiOptions.apis ? apiOptions.apis[key] : undefined;
 
     if (api && componentContent?.length) {
@@ -159,12 +163,14 @@ export function getApiByOrderOption(
 
   switch (api) {
     case "attributes":
-      component.attributes?.forEach(attr => {
+      component.attributes?.forEach((attr) => {
         attr.type = altType ? (attr as any)[altType] || attr.type : attr.type;
       });
       return component.attributes || ([] as Attribute[]);
     case "properties":
-      return getComponentPublicProperties(component, altType) || ([] as Property[]);
+      return (
+        getComponentPublicProperties(component, altType) || ([] as Property[])
+      );
     case "attrsAndProps": {
       return getAttrsAndProps(component, altType);
     }
@@ -227,7 +233,7 @@ export function getMainComponentDescription(
  */
 export function getAttrsAndProps(
   component?: Component,
-  altType = 'parsedType'
+  altType = "parsedType",
 ): AttributeAndProperty[] {
   if (!component) {
     return [];
@@ -276,7 +282,10 @@ export function getAttrsAndProps(
  * @param component CEM component/declaration object
  * @returns {Property[]} An array of properties
  */
-export function getPropertyOnlyFields(component?: Component, altType?: string): Property[] {
+export function getPropertyOnlyFields(
+  component?: Component,
+  altType?: string,
+): Property[] {
   if (!component) {
     return [];
   }
@@ -332,12 +341,12 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
       template: (api?: Attribute[]) =>
         api
           ?.map((attr) => {
-            const getName = (attr: Attribute) =>
+            const name =
               attr.name === attr.fieldName || !attr.fieldName
                 ? `\`${attr.name}\``
                 : `\`${attr.name}\`/\`${attr.fieldName}\``;
 
-            return `- ${getName(attr)}: ${attr.description}\n  - Type: \`${attr.type?.text}\``;
+            return `- ${name}: ${attr.description}\n  - Type: \`${attr.type?.text}\``;
           })
           .join("\n") || "",
     },
@@ -349,7 +358,7 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
         api
           ?.map(
             (prop) =>
-            `- \`${prop.name}\`: ${prop.readonly ? "(readonly) " : ""}${prop.description}\n  - Type: \`${prop.type?.text}\``,
+              `- \`${prop.name}\`: ${prop.readonly ? "(readonly) " : ""}${prop.description}\n  - Type: \`${prop.type?.text}\``,
           )
           .join("\n") || "",
     },
@@ -360,11 +369,11 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
       template: (api?: AttributeAndProperty[]) =>
         api
           ?.map((prop) => {
-            const getName = (prop: AttributeAndProperty) =>
+            const name =
               prop.attrName === prop.propName || !prop.attrName
                 ? `\`${prop.propName}\``
                 : `\`${prop.attrName}\`/\`${prop.propName}\``;
-            return `- ${getName(prop)}: ${prop.description} ${
+            return `- ${name}: ${prop.description} ${
               !prop.attrName ? "(property only)" : ""
             }${prop.readonly ? " (readonly)" : ""}\n  - Type: \`${prop.type?.text}\``;
           })
@@ -378,7 +387,7 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
         api
           ?.map(
             (prop) =>
-            `- \`${prop.name}\`: ${prop.readonly ? "(readonly) " : ""}${prop.description}\n  - Type: \`${prop.type?.text}\``,
+              `- \`${prop.name}\`: ${prop.readonly ? "(readonly) " : ""}${prop.description}\n  - Type: \`${prop.type?.text}\``,
           )
           .join("\n") || "",
     },
@@ -387,7 +396,10 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
       description: "Events that will be emitted by the component.",
       template: (api?: ComponentEvent[]) =>
         api
-          ?.map((event) => `- \`${event.name}\`: ${event.description}\n  - Type: \`${event.type?.text}\``)
+          ?.map(
+            (event) =>
+              `- \`${event.name}\`: ${event.description}\n  - Type: \`${event.type?.text}\``,
+          )
           .join("\n") || "",
     },
     methods: {
@@ -439,7 +451,7 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
           .join("\n") || "",
     },
   },
-  altType: 'parsedType'
+  altType: "parsedType",
 };
 
 /**
