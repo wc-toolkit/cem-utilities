@@ -1,5 +1,11 @@
 # @wc-toolkit/cem-utilities
 
+## 1.5.1
+
+### Patch Changes
+
+- e75edf1: Simplified the logic for getting the attribute and property names
+
 ## 1.5.0
 
 ### Minor Changes
