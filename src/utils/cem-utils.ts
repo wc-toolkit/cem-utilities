@@ -75,13 +75,13 @@ export function getAllComponents<T extends Component>(
   manifest = customElementsManifest;
   setAllDefinitionExports(customElementsManifest);
 
-  (manifest as cem.Package).modules.forEach((module) => {
+  (manifest as cem.Package).modules?.forEach((module) => {
     const ces = module.declarations?.filter(
       (d) => (d as cem.CustomElementDeclaration).customElement
     ) as unknown as Component[];
 
     if (ces?.length) {
-      ces.forEach((ce) => {
+      ces?.forEach((ce) => {
         if (exclude?.includes(ce.name)) {
           return;
         }
