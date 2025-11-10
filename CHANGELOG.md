@@ -1,5 +1,11 @@
 # @wc-toolkit/cem-utilities
 
+## 1.5.3
+
+### Patch Changes
+
+- 8fdeb88: Fixed issue when no modules exist in CEM for descriptions
+
 ## 1.5.2
 
 ### Patch Changes
