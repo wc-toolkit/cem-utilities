@@ -256,10 +256,10 @@ export function getAttrsAndProps(
       };
     }) || [];
   const properties = getComponentPublicProperties(component)
-    .filter((prop) => {
+    ?.filter((prop) => {
       return !attributes?.map((attr) => attr.propName).includes(prop.name);
     })
-    .map((prop) => {
+    ?.map((prop) => {
       return {
         attrName: undefined,
         propName: prop.name,
