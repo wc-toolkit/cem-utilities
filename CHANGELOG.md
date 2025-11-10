@@ -1,5 +1,11 @@
 # @wc-toolkit/cem-utilities
 
+## 1.5.2
+
+### Patch Changes
+
+- 37cd61e: Fixed componenent definition export updater
+
 ## 1.5.1
 
 ### Patch Changes
