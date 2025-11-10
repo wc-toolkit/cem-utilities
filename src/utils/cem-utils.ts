@@ -316,22 +316,20 @@ export function getCustomEventDetailTypes(
   return (types?.length ? [...new Set(types)] : []) as string[];
 }
 
-export function setAllDefinitionExports(customElementsManifest?: unknown) {
-  if (!customElementsManifest) {
+export function setAllDefinitionExports(customElementsManifest?: any) {
+  if (!customElementsManifest?.modules?.length) {
     return;
   }
-  
-  (customElementsManifest as cem.Package).modules.forEach((mod) => {
+
+  (customElementsManifest as cem.Package).modules?.forEach((mod) => {
     const defExports = mod?.exports?.filter(
       (e) => e.kind === "custom-element-definition"
     );
-    if (defExports?.length) {
-      defExports.forEach((e) => {
-        if (e.declaration.name) {
-          definitionExports.set(e.declaration.name, mod.path);
-        }
-      });
-    }
+    defExports?.forEach((e) => {
+      if (e.declaration.name) {
+        definitionExports.set(e.declaration.name, mod.path);
+      }
+    });
   });
 }
 
