@@ -1,5 +1,11 @@
 # @wc-toolkit/cem-utilities
 
+## 1.5.4
+
+### Patch Changes
+
+- b9becd2: Fixed logic for fetching getting components to exclude those elements without tags
+
 ## 1.5.3
 
 ### Patch Changes
