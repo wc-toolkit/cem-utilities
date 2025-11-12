@@ -47,7 +47,7 @@ export const DOM_EVENTS = new Set([
 ]);
 
 const definitionExports = new Map<string, string>();
-let components: unknown[] = [];
+let components: Component[] = [];
 let manifest: unknown;
 
 /**
@@ -76,14 +76,11 @@ export function getAllComponents<T extends Component>(
   setAllDefinitionExports(customElementsManifest);
 
   (manifest as cem.Package).modules?.forEach((module) => {
-    const ces = module.declarations?.filter(
-      (d) => (d as cem.CustomElementDeclaration).customElement
-    ) as unknown as Component[];
-
-    if (ces?.length) {
-      ces?.forEach((ce) => {
-        if (exclude?.includes(ce.name)) {
-          return;
+    components.push(
+      ...(module.declarations?.filter((d) => {
+        const ce = d as unknown as Component;
+        if (exclude?.includes(d.name) || !ce.tagName || !ce.customElement) {
+          return false;
         }
 
         ce.modulePath = module.path;
@@ -91,10 +88,9 @@ export function getAllComponents<T extends Component>(
         if ("typeDefinitionPath" in module && module.typeDefinitionPath) {
           ce.typeDefinitionPath = module.typeDefinitionPath as string;
         }
-
-        components.push(ce);
-      });
-    }
+        return true;
+      }) as unknown as Component[])
+    );
   });
 
   return components as T[];
