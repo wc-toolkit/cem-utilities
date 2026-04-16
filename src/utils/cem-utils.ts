@@ -76,8 +76,8 @@ export function getAllComponents<T extends Component>(
   setAllDefinitionExports(customElementsManifest);
 
   (manifest as cem.Package).modules?.forEach((module) => {
-    components.push(
-      ...(module.declarations?.filter((d) => {
+    const declarations =
+      module.declarations?.filter((d) => {
         const ce = d as unknown as Component;
         if (exclude?.includes(d.name) || !ce.tagName || !ce.customElement) {
           return false;
@@ -89,8 +89,9 @@ export function getAllComponents<T extends Component>(
           ce.typeDefinitionPath = module.typeDefinitionPath as string;
         }
         return true;
-      }) as unknown as Component[])
-    );
+      }) ?? [];
+
+    components.push(...(declarations as unknown as Component[]));
   });
 
   return components as T[];

@@ -31,6 +31,48 @@ describe("getAlComponents", () => {
     // Assert
     expect(components.length).toEqual(58);
   });
+
+  test("should ignore modules without declarations", () => {
+    // Arrange
+    const cemWithoutDeclarations = {
+      schemaVersion: "2.1.0",
+      modules: [
+        {
+          kind: "javascript-module",
+          path: "./index.js",
+          exports: [
+            {
+              kind: "custom-element-definition",
+              name: "my-button",
+              declaration: {
+                name: "MyButton",
+                module: "./button.js",
+              },
+            },
+          ],
+        },
+        {
+          kind: "javascript-module",
+          path: "./button.js",
+          declarations: [
+            {
+              kind: "class",
+              name: "MyButton",
+              customElement: true,
+              tagName: "my-button",
+            },
+          ],
+        },
+      ],
+    };
+
+    // Act
+    const components = getAllComponents(cemWithoutDeclarations);
+
+    // Assert
+    expect(components).toHaveLength(1);
+    expect(components[0]?.name).toBe("MyButton");
+  });
 });
 
 describe("getComponentByClassName", () => {
