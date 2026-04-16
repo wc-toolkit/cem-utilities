@@ -1,5 +1,11 @@
 # @wc-toolkit/cem-utilities
 
+## 1.5.5
+
+### Patch Changes
+
+- 4ea8bef: Added fallback when there are no declarations in the manifest
+
 ## 1.5.4
 
 ### Patch Changes
