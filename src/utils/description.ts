@@ -95,10 +95,15 @@ export function getComponentDetailsTemplate(
     throw new Error("Component is required");
   }
 
+  const { order, ...apiOptionsInput } = options || {};
   const apiOptions = deepMerge<ComponentDescriptionOptions>(
     defaultDescriptionOptions,
-    options,
+    apiOptionsInput,
   );
+
+  // A caller-supplied `order` replaces the default outright instead of being
+  // appended to it, and is never merged into the shared `defaultDescriptionOptions`.
+  const sectionOrder = order ?? defaultDescriptionOptions.order;
 
   let description = getMainComponentDescription(
     component,
@@ -109,7 +114,7 @@ export function getComponentDetailsTemplate(
     apiOptions.sectionHeadingLevel || 2,
   );
 
-  apiOptions.order?.forEach((key) => {
+  sectionOrder?.forEach((key) => {
     const componentContent = getApiByOrderOption(
       component,
       key,

@@ -3,6 +3,7 @@ import {
   getComponentDetailsTemplate,
   getMemberDescription,
   getAttrsAndProps,
+  defaultDescriptionOptions,
 } from "./description";
 import { shoelaceCem } from "./__MOCKS__/shoelace-cem" with { type: "json" };
 import { getComponentByClassName } from "./cem-utils";
@@ -23,6 +24,65 @@ describe("getComponentDetailsTemplate", () => {
     expect(result.includes('- `show() => void`: Shows the alert.')).toBeTruthy();
     expect(result.includes('- `(default)`: The alert\'s main content.')).toBeTruthy();
     expect(result.includes('## CSS States')).toBeFalsy();
+  });
+
+  test("should not mutate `defaultDescriptionOptions` or duplicate sections across calls", () => {
+    // Arrange
+    const component = {
+      name: "X",
+      tagName: "x-y",
+      description: "d",
+      attributes: [
+        {
+          name: "a",
+          fieldName: "a",
+          type: { text: "boolean" },
+          description: "A",
+        },
+      ],
+    };
+    const options = {
+      order: ["attrsAndProps"],
+      apis: {
+        attrsAndProps: {
+          heading: "A&P",
+          template: (rows: unknown[]) => rows.length + " rows",
+        },
+      },
+    };
+
+    // Act
+    const results = [1, 2, 3].map(() =>
+      getComponentDetailsTemplate(component, options),
+    );
+
+    // Assert
+    expect(defaultDescriptionOptions.order.length).toEqual(7);
+    results.forEach((result) => {
+      expect(result).toEqual(results[0]);
+      expect((result.match(/## A&P/g) || []).length).toEqual(1);
+    });
+  });
+
+  test("should render only the sections listed in a caller-supplied `order`", () => {
+    // Arrange
+    const component = {
+      name: "X",
+      tagName: "x-y",
+      description: "d",
+      events: [{ name: "change", type: { text: "Event" } }],
+    };
+
+    // Act
+    const result = getComponentDetailsTemplate(component, {
+      order: ["events"],
+    });
+
+    // Assert
+    expect((result.match(/## Events/g) || []).length).toEqual(1);
+    expect(result.includes("## Attributes & Properties")).toBeFalsy();
+    expect(result.includes("## Methods")).toBeFalsy();
+    expect(result.includes("## Slots")).toBeFalsy();
   });
 });
 
