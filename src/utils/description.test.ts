@@ -5,6 +5,7 @@ import {
   getAttrsAndProps,
   getApiByOrderOption,
   defaultDescriptionOptions,
+  partitionByInherited,
 } from "./description";
 import type { ApiOrderOption } from "./description";
 import { shoelaceCem } from "./__MOCKS__/shoelace-cem" with { type: "json" };
@@ -24,7 +25,7 @@ describe("getComponentDetailsTemplate", () => {
 
     expect(result.includes('## Attributes & Properties')).toBeTruthy();
     expect(result.includes('- `sl-show`: Emitted when the alert opens.')).toBeTruthy();
-    expect(result.includes('- `show() => void`: Shows the alert.')).toBeTruthy();
+    expect(result.includes('- `show()`: Shows the alert.')).toBeTruthy();
     expect(result.includes('- `(default)`: The alert\'s main content.')).toBeTruthy();
     expect(result.includes('## CSS States')).toBeFalsy();
   });
@@ -278,5 +279,187 @@ describe("getMemberDescription", () => {
 
     // Assert
     expect(result).toBe("@deprecated Deprecation message - Test description");
+  });
+});
+
+describe("inherited member partitioning", () => {
+  const component = {
+    name: "X",
+    tagName: "x-y",
+    customElement: true as const,
+    description: "d",
+    attributes: [
+      {
+        name: "inherited-attr",
+        fieldName: "inheritedAttr",
+        type: { text: "string" },
+        inheritedFrom: { name: "BaseClass", module: "base.js" },
+      },
+      {
+        name: "own-attr",
+        fieldName: "ownAttr",
+        type: { text: "boolean" },
+      },
+    ],
+    members: [
+      {
+        kind: "field",
+        name: "inheritedAttr",
+        type: { text: "string" },
+        inheritedFrom: { name: "BaseClass", module: "base.js" },
+      },
+      {
+        kind: "field",
+        name: "ownProp",
+        type: { text: "number" },
+      },
+    ],
+  } as unknown as Component;
+
+  test("`partitionByInherited` splits rows into own and inherited buckets in their original order", () => {
+    // Arrange
+    const rows = [
+      { name: "a", inheritedFrom: { name: "Base" } },
+      { name: "b" },
+      { name: "c", inheritedFrom: { name: "Base" } },
+    ];
+
+    // Act
+    const result = partitionByInherited(rows);
+
+    // Assert
+    expect(result.own.map((r) => r.name)).toEqual(["b"]);
+    expect(result.inherited.map((r) => r.name)).toEqual(["a", "c"]);
+  });
+
+  test("`getAttrsAndProps` returns a flat list by default", () => {
+    // Act
+    const result = getAttrsAndProps(component);
+
+    // Assert
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toEqual(3);
+  });
+
+  test("`getAttrsAndProps` partitions when `partition: true`", () => {
+    // Act
+    const result = getAttrsAndProps(component, { partition: true });
+
+    // Assert
+    expect(result.own.map((r) => r.propName)).toEqual(["ownAttr", "ownProp"]);
+    expect(result.inherited.map((r) => r.propName)).toEqual([
+      "inheritedAttr",
+    ]);
+  });
+
+  test("`getAttrsAndProps` accepts an options object with `altType`", () => {
+    // Act
+    const result = getAttrsAndProps(component, { altType: false });
+
+    // Assert
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  test("`getComponentDetailsTemplate` mixes inherited members in by default", () => {
+    // Act
+    const result = getComponentDetailsTemplate(component, {
+      order: ["attrsAndProps"] as ApiOrderOption[],
+      apis: {
+        attrsAndProps: {
+          heading: "A&P",
+          template: (rows?: unknown[]) =>
+            (rows as Array<{ propName?: string }>)
+              ?.map((row) => row.propName)
+              .join(", ") ?? "",
+        },
+      },
+    });
+
+    // Assert
+    expect(result).toContain("inheritedAttr, ownAttr, ownProp");
+    expect(result).not.toContain("Inherited A&P");
+  });
+
+  test("`inherited: 'omit'` excludes inherited members from the rendered output", () => {
+    // Act
+    const result = getComponentDetailsTemplate(component, {
+      order: ["attrsAndProps"] as ApiOrderOption[],
+      inherited: "omit",
+      apis: {
+        attrsAndProps: {
+          heading: "A&P",
+          template: (rows?: unknown[]) =>
+            (rows as Array<{ propName?: string }>)
+              ?.map((row) => row.propName)
+              .join(", ") ?? "",
+        },
+      },
+    });
+
+    // Assert
+    expect(result).toContain("ownAttr, ownProp");
+    expect(result).not.toContain("inheritedAttr");
+  });
+
+  test("`inherited: 'separate'` renders own members first and inherited members under their own heading", () => {
+    // Act
+    const result = getComponentDetailsTemplate(component, {
+      order: ["attrsAndProps"] as ApiOrderOption[],
+      inherited: "separate",
+      apis: {
+        attrsAndProps: {
+          heading: "A&P",
+          template: (rows?: unknown[]) =>
+            (rows as Array<{ propName?: string }>)
+              ?.map((row) => row.propName)
+              .join(", ") ?? "",
+        },
+      },
+    });
+
+    // Assert
+    expect(result).toContain("## A&P");
+    expect(result).toContain("## Inherited A&P");
+    expect(result.indexOf("ownAttr")).toBeLessThan(
+      result.indexOf("Inherited A&P")
+    );
+    expect(result.slice(result.indexOf("## Inherited A&P"))).toContain(
+      "inheritedAttr"
+    );
+  });
+
+  test("`inherited: 'separate'` skips the own heading when only inherited members exist", () => {
+    // Arrange
+    const allInherited = {
+      ...component,
+      attributes: [
+        {
+          name: "inherited-attr",
+          fieldName: "inheritedAttr",
+          type: { text: "string" },
+          inheritedFrom: { name: "BaseClass", module: "base.js" },
+        },
+      ],
+      members: [],
+    } as unknown as Component;
+
+    // Act
+    const result = getComponentDetailsTemplate(allInherited, {
+      order: ["attrsAndProps"] as ApiOrderOption[],
+      inherited: "separate",
+      apis: {
+        attrsAndProps: {
+          heading: "A&P",
+          template: (rows?: unknown[]) =>
+            (rows as Array<{ propName?: string }>)
+              ?.map((row) => row.propName)
+              .join(", ") ?? "",
+        },
+      },
+    });
+
+    // Assert
+    expect(result).not.toContain("## A&P");
+    expect(result).toContain("## Inherited A&P");
   });
 });
