@@ -140,4 +140,42 @@ describe("mergeDeep", () => {
 
     expectTypeOf(result).toEqualTypeOf<Target>();
   });
+
+  test("should not mutate either argument", () => {
+    const target = {
+      a: 1,
+      b: 2,
+      c: {
+        d: 3,
+        e: 4,
+      },
+      list: [1, 2],
+    };
+    const source = {
+      a: 2,
+      c: {
+        d: 4,
+        f: [1, 2, 3],
+      },
+      list: [3],
+    };
+    const targetBefore = structuredClone(target);
+    const sourceBefore = structuredClone(source);
+
+    deepMerge(target, source);
+
+    expect(target).toEqual(targetBefore);
+    expect(source).toEqual(sourceBefore);
+  });
+
+  test("should keep concatenating arrays in the result without touching the inputs", () => {
+    const target = { list: [1, 2] };
+    const source = { list: [3, 4] };
+
+    const result = deepMerge(target, source);
+
+    expect(result).toEqual({ list: [1, 2, 3, 4] });
+    expect(target).toEqual({ list: [1, 2] });
+    expect(source).toEqual({ list: [3, 4] });
+  });
 });

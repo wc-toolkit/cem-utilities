@@ -10,6 +10,7 @@ import {
 } from "./cem-utils";
 import { shoelaceCem } from "./__MOCKS__/shoelace-cem" with { type: "json" };
 import { guiCem } from "./__MOCKS__/gui-cem" with { type: "json" };
+import type { Component } from "./types";
 
 describe("getAlComponents", () => {
   test("should return one component from `guiCem`", () => {
@@ -212,6 +213,53 @@ describe("getPublicMethods", () => {
     expect(validityEvent?.type.text).toEqual(
       "setCustomValidity(message: string) => void"
     );
+  });
+});
+
+describe("getters do not mutate their input", () => {
+  const component = {
+    name: "X",
+    tagName: "x-y",
+    customElement: true as const,
+    members: [
+      {
+        kind: "method",
+        name: "focus",
+        privacy: "public",
+        return: { type: { text: "void" } },
+      },
+      {
+        kind: "field",
+        name: "size",
+        privacy: "public",
+        type: { text: "Size" },
+        parsedType: { text: "'sm' | 'lg'" },
+      },
+    ],
+  } as unknown as Component;
+
+  test("getComponentPublicMethods leaves the input untouched and derives the signature on a copy", () => {
+    // Arrange
+    const before = structuredClone(component);
+
+    // Act
+    const methods = getComponentPublicMethods(component);
+
+    // Assert
+    expect(component).toEqual(before);
+    expect(methods[0]?.type.text).toBe("focus() => void");
+  });
+
+  test("getComponentPublicProperties leaves the input untouched and applies `altType` on a copy", () => {
+    // Arrange
+    const before = structuredClone(component);
+
+    // Act
+    const props = getComponentPublicProperties(component, "parsedType");
+
+    // Assert
+    expect(component).toEqual(before);
+    expect(props[0]?.type?.text).toBe("'sm' | 'lg'");
   });
 });
 
