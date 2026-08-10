@@ -3,6 +3,9 @@ import {
   removeQuotes,
   toKebabCase,
   toPascalCase,
+  escapeTableCell,
+  createMarkdownTable,
+  getFirstSentence,
 } from "./string-utils.js";
 
 describe("toKebabCase", () => {
@@ -96,5 +99,121 @@ describe("toPascalCase", () => {
 
     // Assert
     expect(result).toBe("TestExample");
+  });
+});
+
+describe("escapeTableCell", () => {
+  test("should escape pipe characters", () => {
+    // Arrange
+    const input = "'a' | 'b'";
+
+    // Act
+    const result = escapeTableCell(input);
+
+    // Assert
+    expect(result).toBe("'a' \\| 'b'");
+  });
+
+  test("should flatten newlines", () => {
+    // Arrange
+    const input = "line one\nline two";
+
+    // Act
+    const result = escapeTableCell(input);
+
+    // Assert
+    expect(result).toBe("line one<br>line two");
+  });
+
+  test("should leave plain text untouched", () => {
+    // Arrange
+    const input = "a plain description";
+
+    // Act
+    const result = escapeTableCell(input);
+
+    // Assert
+    expect(result).toBe("a plain description");
+  });
+});
+
+describe("createMarkdownTable", () => {
+  test("should render headers, a divider, and escaped rows", () => {
+    // Arrange
+    const headers = ["Name", "Type", "Description"];
+    const rows = [
+      ["size", "'sm' | 'lg'", "The size."],
+      ["label", "string", "Line one\nLine two"],
+    ];
+
+    // Act
+    const result = createMarkdownTable(headers, rows);
+
+    // Assert
+    expect(result).toBe(
+      [
+        "| Name | Type | Description |",
+        "| --- | --- | --- |",
+        "| size | 'sm' \\| 'lg' | The size. |",
+        "| label | string | Line one<br>Line two |",
+      ].join("\n")
+    );
+  });
+
+  test("should render a table with headers only when there are no rows", () => {
+    // Arrange
+    const headers = ["Name"];
+
+    // Act
+    const result = createMarkdownTable(headers, []);
+
+    // Assert
+    expect(result).toBe("| Name |\n| --- |");
+  });
+});
+
+describe("getFirstSentence", () => {
+  test("should return the first sentence of a longer string", () => {
+    // Arrange
+    const input = "Shows the alert. This will also do something else.";
+
+    // Act
+    const result = getFirstSentence(input);
+
+    // Assert
+    expect(result).toBe("Shows the alert.");
+  });
+
+  test("should respect the length cap and add an ellipsis", () => {
+    // Arrange
+    const input = "This is a very long sentence that will be truncated.";
+
+    // Act
+    const result = getFirstSentence(input, 20);
+
+    // Assert
+    expect(result).toBe("This is a very lo...");
+  });
+
+  test("should not split on decimals", () => {
+    // Arrange
+    const input = "Version 2.0 of the component is out. Use it.";
+
+    // Act
+    const result = getFirstSentence(input);
+
+    // Assert
+    expect(result).toBe("Version 2.0 of the component is out.");
+  });
+
+  test("should return the whole string when there is no sentence boundary", () => {
+    // Arrange
+    const input = "A single sentence without punctuation";
+
+    // Act
+    const result = getFirstSentence(input);
+
+    // Assert
+    expect(result).toBe("A single sentence without punctuation");
   });
 });

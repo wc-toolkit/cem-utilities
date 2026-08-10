@@ -7,6 +7,8 @@ import {
   getComponentPublicMethods,
   getComponentPublicProperties,
   getCustomEventDetailTypes,
+  isPrivateMember,
+  preferParsedLiteralUnion,
 } from "./cem-utils";
 import { shoelaceCem } from "./__MOCKS__/shoelace-cem" with { type: "json" };
 import { guiCem } from "./__MOCKS__/gui-cem" with { type: "json" };
@@ -201,7 +203,7 @@ describe("getPublicMethods", () => {
     expect(methods.length).toEqual(5);
   });
 
-  test("should return 2 public methods for `SlButton`", () => {
+  test("should omit the return clause when the manifest records no return type", () => {
     // Arrange
     const component = getComponentByClassName(shoelaceCem, "SlButton");
 
@@ -210,9 +212,7 @@ describe("getPublicMethods", () => {
     const validityEvent = methods.find((m) => m.name === "setCustomValidity");
 
     // Assert
-    expect(validityEvent?.type.text).toEqual(
-      "setCustomValidity(message: string) => void"
-    );
+    expect(validityEvent?.type.text).toEqual("setCustomValidity(message: string)");
   });
 });
 
@@ -260,6 +260,24 @@ describe("getters do not mutate their input", () => {
     // Assert
     expect(component).toEqual(before);
     expect(props[0]?.type?.text).toBe("'sm' | 'lg'");
+  });
+
+  test("getAllComponents leaves the manifest untouched and resolves module paths on copies", () => {
+    // Arrange
+    const before = structuredClone(shoelaceCem);
+
+    // Act
+    const components = getAllComponents(shoelaceCem);
+    const alert = components.find((c) => c.name === "SlAlert");
+
+    // Assert
+    expect(shoelaceCem).toEqual(before);
+    expect(alert?.modulePath).toBe(
+      "dist/components/alert/alert.component.js"
+    );
+    expect(alert?.typeDefinitionPath).toBe(
+      "dist/components/alert/alert.component.d.ts"
+    );
   });
 });
 
@@ -317,5 +335,210 @@ describe("getCustomEventDetailTypes", () => {
 
     // Assert
     expect(eventTypes?.length).toEqual(2);
+  });
+});
+
+describe("preferParsedLiteralUnion", () => {
+  test("should prefer `parsedType` when it is a union of quoted string literals", () => {
+    // Arrange
+    const member = {
+      type: { text: "ZdControlSize" },
+      parsedType: { text: "'default' | 'small'" },
+    };
+
+    // Act
+    const result = preferParsedLiteralUnion(member);
+
+    // Assert
+    expect(result).toBe("'default' | 'small'");
+  });
+
+  test("should return `undefined` for boolean literal unions", () => {
+    // Arrange
+    const member = {
+      type: { text: "boolean | undefined" },
+      parsedType: { text: "false | true | undefined" },
+    };
+
+    // Act
+    const result = preferParsedLiteralUnion(member);
+
+    // Assert
+    expect(result).toBeUndefined();
+  });
+
+  test("should return `undefined` when `parsedType` is a named type", () => {
+    // Arrange
+    const member = {
+      type: { text: "Mode" },
+      parsedType: { text: "Mode" },
+    };
+
+    // Act
+    const result = preferParsedLiteralUnion(member);
+
+    // Assert
+    expect(result).toBeUndefined();
+  });
+
+  test("should return `undefined` when `parsedType` is missing", () => {
+    // Arrange
+    const member = { type: { text: "string" } };
+
+    // Act
+    const result = preferParsedLiteralUnion(member);
+
+    // Assert
+    expect(result).toBeUndefined();
+  });
+});
+
+describe("privacy predicate", () => {
+  const component = {
+    name: "X",
+    tagName: "x-y",
+    customElement: true as const,
+    members: [
+      {
+        kind: "field",
+        name: "size",
+        privacy: "public",
+        type: { text: "string" },
+      },
+      {
+        kind: "field",
+        name: "_internalState",
+        privacy: "public",
+        type: { text: "string" },
+      },
+      {
+        kind: "method",
+        name: "_internalMethod",
+        privacy: "public",
+      },
+      {
+        kind: "method",
+        name: "staticMethod",
+        privacy: "public",
+        static: true,
+      },
+      {
+        kind: "field",
+        name: "staticField",
+        privacy: "public",
+        static: true,
+        type: { text: "string" },
+      },
+    ],
+  } as unknown as Component;
+
+  test("should treat `#`-prefixed names as private by default", () => {
+    // Arrange
+    const hashed = {
+      kind: "field",
+      name: "#hidden",
+      privacy: "public",
+    };
+
+    // Act
+    const result = isPrivateMember(hashed);
+
+    // Assert
+    expect(result).toBe(true);
+  });
+
+  test("should treat `private` privacy as private by default", () => {
+    // Arrange
+    const member = { kind: "field", name: "x", privacy: "private" };
+
+    // Act
+    const result = isPrivateMember(member);
+
+    // Assert
+    expect(result).toBe(true);
+  });
+
+  test("a custom predicate can exclude `_`-prefixed members from properties", () => {
+    // Arrange
+    const isPrivate = (m: unknown) =>
+      isPrivateMember(m) ||
+      (m as { name?: string })?.name?.startsWith("_") === true;
+
+    // Act
+    const props = getComponentPublicProperties(component, undefined, isPrivate);
+
+    // Assert
+    expect(props.map((p) => p.name)).toEqual(["size"]);
+  });
+
+  test("a custom predicate can exclude `_`-prefixed members from methods", () => {
+    // Arrange
+    const isPrivate = (m: unknown) =>
+      isPrivateMember(m) ||
+      (m as { name?: string })?.name?.startsWith("_") === true;
+
+    // Act
+    const methods = getComponentPublicMethods(component, isPrivate);
+
+    // Assert
+    expect(methods.map((m) => m.name)).toEqual([]);
+  });
+
+  test("static methods are excluded from the public methods list", () => {
+    // Arrange
+    const component = {
+      name: "X",
+      tagName: "x-y",
+      customElement: true as const,
+      members: [
+        {
+          kind: "method",
+          name: "instanceMethod",
+          privacy: "public",
+        },
+        {
+          kind: "method",
+          name: "staticMethod",
+          privacy: "public",
+          static: true,
+        },
+      ],
+    } as unknown as Component;
+
+    // Act
+    const methods = getComponentPublicMethods(component);
+
+    // Assert
+    expect(methods.map((m) => m.name)).toEqual(["instanceMethod"]);
+  });
+
+  test("static fields are excluded from the public properties list", () => {
+    // Arrange
+    const component = {
+      name: "X",
+      tagName: "x-y",
+      customElement: true as const,
+      members: [
+        {
+          kind: "field",
+          name: "instanceField",
+          privacy: "public",
+          type: { text: "string" },
+        },
+        {
+          kind: "field",
+          name: "staticField",
+          privacy: "public",
+          static: true,
+          type: { text: "string" },
+        },
+      ],
+    } as unknown as Component;
+
+    // Act
+    const props = getComponentPublicProperties(component);
+
+    // Assert
+    expect(props.map((p) => p.name)).toEqual(["instanceField"]);
   });
 });

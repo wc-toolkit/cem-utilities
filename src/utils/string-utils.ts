@@ -70,3 +70,62 @@ export function toCamelCase(value: string = "") {
   );
   return capital?.join("") || "";
 }
+
+/**
+ * Escapes a string for safe use as a single Markdown table cell.
+ * Pipe characters are escaped so union types like `'a' | 'b'` do not
+ * destroy the row, and newlines are flattened so multi-line descriptions
+ * do not break the table syntax.
+ * @param value
+ * @returns {string}
+ */
+export function escapeTableCell(value: string): string {
+  return value.replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
+}
+
+/**
+ * Creates a Markdown table from headers and rows.
+ * Every cell is escaped via `escapeTableCell`.
+ * @param headers
+ * @param rows
+ * @returns {string}
+ */
+export function createMarkdownTable(
+  headers: string[],
+  rows: string[][],
+): string {
+  const escape = escapeTableCell;
+  const header = headers.map(escape).join(" | ");
+  const divider = headers.map(() => "---").join(" | ");
+  const body = rows.map((row) => row.map(escape).join(" | "));
+  return [
+    `| ${header} |`,
+    `| ${divider} |`,
+    ...body.map((row) => `| ${row} |`),
+  ].join("\n");
+}
+
+/**
+ * Extracts the first sentence from a string, capped at a maximum length.
+ * A sentence ends at the first `.`, `!` or `?` followed by whitespace or
+ * the end of the string. When the sentence exceeds `maxLength`, it is
+ * truncated with an ellipsis.
+ * @param text
+ * @param maxLength
+ * @returns {string}
+ */
+export function getFirstSentence(text: string, maxLength: number = 100): string {
+  if (!text) {
+    return "";
+  }
+
+  const trimmed = text.trim();
+  const end = trimmed.search(/[.!?](?!\d)(?=\s|$)/);
+  let sentence = end === -1 ? trimmed : trimmed.slice(0, end + 1);
+
+  if (sentence.length > maxLength) {
+    sentence = `${sentence.slice(0, Math.max(maxLength - 3, 0)).trimEnd()}...`;
+  }
+
+  return sentence;
+}

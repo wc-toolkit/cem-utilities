@@ -34,9 +34,10 @@ You can find more details on these functions [here](https://wc-toolkit.com/cem-u
 
 - `getComponentDetailsTemplate` - returns a formatted string with the details of the various APIs of a custom element.
 - `getMainComponentDescription` - returns the component's primary description
-- `getAttrsAndProps` - returns an array of `AttributeAndProperty` objects that contain the attributes and public properties (including those not associated with an attribute) for a component.
+- `getAttrsAndProps` - returns an array of `AttributeAndProperty` objects that contain the attributes and public properties (including those not associated with an attribute) for a component. Pass `{ partition: true }` to split the result into own and inherited members.
 - `getPropertyOnlyFields` - returns a list of properties that do not have a corresponding attribute.
 - `getMemberDescription` - returns a description for a member of a component with any relevant deprecation information.
+- `partitionByInherited` - partitions a list of members into own and inherited buckets based on the presence of an `inheritedFrom` reference.
 
 ## String Utilities
 
@@ -47,3 +48,6 @@ You can find more details on these functions [here](https://wc-toolkit.com/cem-u
 - `toSentenceCase` - converts a string to sentence-case.
 - `toPascalCase` - converts a string to pascal-case.
 - `toCamelCase` - converts a string to camel-case.
+- `escapeTableCell` - escapes a string for safe use as a single Markdown table cell.
+- `createMarkdownTable` - creates a Markdown table from headers and rows.
+- `getFirstSentence` - extracts the first sentence from a string, capped at a maximum length.

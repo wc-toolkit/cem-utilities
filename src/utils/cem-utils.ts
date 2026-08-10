@@ -82,16 +82,18 @@ export function getAllComponents<T extends Component>(
         if (exclude?.includes(d.name) || !ce.tagName || !ce.customElement) {
           return false;
         }
-
-        ce.modulePath = module.path;
-        ce.definitionPath = definitionExports.get(ce.name);
-        if ("typeDefinitionPath" in module && module.typeDefinitionPath) {
-          ce.typeDefinitionPath = module.typeDefinitionPath as string;
-        }
         return true;
       }) ?? [];
 
-    components.push(...(declarations as unknown as Component[]));
+    declarations.forEach((d) => {
+      const ce = { ...(d as unknown as Component) };
+      ce.modulePath = module.path;
+      ce.definitionPath = definitionExports.get(ce.name);
+      if ("typeDefinitionPath" in module && module.typeDefinitionPath) {
+        ce.typeDefinitionPath = module.typeDefinitionPath as string;
+      }
+      components.push(ce);
+    });
   });
 
   return components as T[];
@@ -194,13 +196,67 @@ export function getAltType(
 }
 
 /**
+ * A type policy that prefers `parsedType` only when it is a union of two or
+ * more quoted string literal values (ex: `'sm' | 'lg'`), falling back to
+ * `member.type` otherwise.
+ *
+ * This is a common preference for documenting design systems: the parsed
+ * union names the legal values, while `parsedType` for other kinds of types
+ * (ex: `false | true | undefined` for a boolean) is noise.
+ * @param member the member object (attribute, field, etc.)
+ * @returns the `parsedType` text when it is a literal union, otherwise `undefined`
+ */
+export function preferParsedLiteralUnion(member: unknown): string | undefined {
+  const text = (member as { parsedType?: { text?: string } })?.parsedType
+    ?.text;
+
+  if (!text) {
+    return undefined;
+  }
+
+  const parts = text.split("|").map((part) => part.trim());
+  const isQuotedLiteral = (part: string) =>
+    part.length >= 2 &&
+    ((part.startsWith("'") && part.endsWith("'")) ||
+      (part.startsWith("`") && part.endsWith("`")));
+
+  return parts.length >= 2 && parts.every(isQuotedLiteral) ? text : undefined;
+}
+
+/**
+ * The type used to define a predicate that determines whether a member is
+ * private and should be excluded from the public API getters.
+ * @param member the member object (field, method, etc.)
+ * @returns `true` when the member should be excluded
+ */
+export type PrivacyPredicate = (member: unknown) => boolean;
+
+/**
+ * The default privacy predicate: excludes members with a `private` or
+ * `protected` privacy value, and members with a `#`-prefixed name.
+ * @param member the member object (field, method, etc.)
+ * @returns {boolean} `true` when the member is private
+ */
+export const isPrivateMember: PrivacyPredicate = (member) => {
+  const m = member as { privacy?: string; name?: string };
+  return (
+    m.privacy === "private" ||
+    m.privacy === "protected" ||
+    (m.name?.startsWith("#") ?? false)
+  );
+};
+
+/**
  * Gets a list of public properties from a CEM component
  * @param component CEM component/declaration object
+ * @param altType the alt type preference
+ * @param isPrivate a predicate that determines whether a member is private
  * @returns {Array<Property>} an array of public properties for a given component
  */
 export function getComponentPublicProperties<T extends Property>(
   component?: Component,
-  altType?: AltTypeOption
+  altType?: AltTypeOption,
+  isPrivate: PrivacyPredicate = isPrivateMember
 ) {
   if (!component || !component.members) {
     return [];
@@ -211,10 +267,8 @@ export function getComponentPublicProperties<T extends Property>(
       ?.filter(
         (member) =>
           member.kind === "field" &&
-          member.privacy !== "private" &&
-          member.privacy !== "protected" &&
-          !member.static &&
-          !member.name.startsWith("#")
+          !isPrivate(member) &&
+          !member.static
       )
       .map((member) => {
         const alt = getAltType(member, altType);
@@ -226,10 +280,12 @@ export function getComponentPublicProperties<T extends Property>(
 /**
  * Get all public methods for a component
  * @param component CEM component/declaration object
+ * @param isPrivate a predicate that determines whether a member is private
  * @returns {Array<Method>} an array of methods for a given component
  */
 export function getComponentPublicMethods<T extends Method>(
-  component?: Component
+  component?: Component,
+  isPrivate: PrivacyPredicate = isPrivateMember
 ): T[] {
   if (!component || !component.members) {
     return [];
@@ -248,16 +304,22 @@ export function getComponentPublicMethods<T extends Method>(
       component?.members?.filter(
         (member) =>
           member.kind === "method" &&
-          member.privacy !== "private" &&
-          member.privacy !== "protected" &&
-          !member.name.startsWith("#")
+          !isPrivate(member) &&
+          !member.static
       ) as Method[]
     )?.map((m) => {
-      // reconstruct method type on a copy so the source member is untouched
+      const parameters =
+        m.parameters?.map((p) => getParameter(p)).join(", ") || "";
+      // reconstruct method type on a copy so the source member is untouched.
+      // the return clause is only included when the manifest recorded one, so
+      // "no return type recorded" is not rendered as a positive `=> void`.
+      const returnClause = m.return?.type?.text
+        ? ` => ${m.return.type.text}`
+        : "";
       return {
         ...m,
         type: {
-          text: `${m.name}(${m.parameters?.map((p) => getParameter(p)).join(", ") || ""}) => ${m.return?.type?.text || "void"}`,
+          text: `${m.name}(${parameters})${returnClause}`,
         },
       } as T;
     }) as T[]
