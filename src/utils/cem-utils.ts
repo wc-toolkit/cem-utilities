@@ -159,21 +159,59 @@ export function getComponentByTagName<T extends Component>(
 }
 
 /**
+ * The possible values for configuring how a member's type is resolved.
+ * - `string`: the name of a member property holding a `Type` to prefer over `member.type`
+ * - `false`: opt out; always use `member.type`
+ * - a function: resolves the type text per member; `undefined` falls back to `member.type`
+ */
+export type AltTypeOption =
+  | string
+  | false
+  | ((member: unknown) => string | undefined);
+
+/**
+ * Resolves the preferred type for a member based on an `AltTypeOption`.
+ * @param member the member object (attribute, field, etc.)
+ * @param altType the alt type preference
+ * @returns the preferred `Type` or `undefined` when `member.type` should be used
+ */
+export function getAltType(
+  member: unknown,
+  altType?: AltTypeOption
+): cem.Type | undefined {
+  if (typeof altType === "function") {
+    const text = altType(member);
+    return text !== undefined ? { text } : undefined;
+  }
+
+  if (typeof altType === "string" && altType) {
+    return (member as Record<string, unknown>)[altType] as
+      | cem.Type
+      | undefined;
+  }
+
+  return undefined;
+}
+
+/**
  * Gets a list of public properties from a CEM component
  * @param component CEM component/declaration object
  * @returns {Array<Property>} an array of public properties for a given component
  */
 export function getComponentPublicProperties<T extends Property>(
   component?: Component,
-  altType?: string
+  altType?: AltTypeOption
 ) {
   if (!component || !component.members) {
     return [];
   }
 
   component.members?.forEach((member) => {
-    if (member.kind === "field" && altType) {
-      member.type = (member as any)[altType] || member.type;
+    if (member.kind === "field") {
+      const alt = getAltType(member, altType);
+      if (alt) {
+        member.type = alt;
+      }
     }
   });
 

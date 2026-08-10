@@ -1,8 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   getComponentPublicMethods,
   getComponentPublicProperties,
+  getAltType,
 } from "./cem-utils";
+import type { AltTypeOption } from "./cem-utils";
 import { deepMerge } from "./deep-merge";
 import type {
   Attribute,
@@ -56,10 +57,12 @@ export type ComponentDescriptionOptions = {
    */
   descriptionSrc?: "description" | "summary" | (string & {});
   /**
-   * The type of the component description
+   * The type preference for members. Defaults to `"parsedType"`.
+   * Pass `false` to always use `member.type`, or a function to resolve the
+   * type text per member (`undefined` falls back to `member.type`).
    * @default "parsedType"
    */
-  altType?: string;
+  altType?: AltTypeOption;
   /**
    * The options for each component API
    */
@@ -151,7 +154,7 @@ export function getComponentDetailsTemplate(
 export function getApiByOrderOption(
   component?: Component,
   api?: ApiOrderOption,
-  altType?: string,
+  altType?: AltTypeOption,
 ):
   | Attribute[]
   | Property[]
@@ -169,7 +172,10 @@ export function getApiByOrderOption(
   switch (api) {
     case "attributes":
       component.attributes?.forEach((attr) => {
-        attr.type = altType ? (attr as any)[altType] || attr.type : attr.type;
+        const alt = getAltType(attr, altType);
+        if (alt) {
+          attr.type = alt;
+        }
       });
       return component.attributes || ([] as Attribute[]);
     case "properties":
@@ -238,7 +244,7 @@ export function getMainComponentDescription(
  */
 export function getAttrsAndProps(
   component?: Component,
-  altType = "parsedType",
+  altType: AltTypeOption = "parsedType",
 ): AttributeAndProperty[] {
   if (!component) {
     return [];
@@ -252,7 +258,7 @@ export function getAttrsAndProps(
         summary: attr.summary,
         description: attr.description,
         inheritedFrom: attr.inheritedFrom,
-        type: (attr as any)[altType] || attr.type,
+        type: getAltType(attr, altType) || attr.type,
         default: attr.default,
         deprecated: attr.deprecated,
         static: false,
@@ -271,7 +277,7 @@ export function getAttrsAndProps(
         summary: prop.summary,
         description: prop.description,
         inheritedFrom: prop.inheritedFrom,
-        type: (prop as any)[altType] || prop.type,
+        type: getAltType(prop, altType) || prop.type,
         default: prop.default,
         deprecated: prop.deprecated,
         static: prop.static,
@@ -289,7 +295,7 @@ export function getAttrsAndProps(
  */
 export function getPropertyOnlyFields(
   component?: Component,
-  altType?: string,
+  altType?: AltTypeOption,
 ): Property[] {
   if (!component) {
     return [];
