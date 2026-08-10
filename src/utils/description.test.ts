@@ -3,11 +3,13 @@ import {
   getComponentDetailsTemplate,
   getMemberDescription,
   getAttrsAndProps,
+  getApiByOrderOption,
   defaultDescriptionOptions,
 } from "./description";
 import type { ApiOrderOption } from "./description";
 import { shoelaceCem } from "./__MOCKS__/shoelace-cem" with { type: "json" };
 import { getComponentByClassName } from "./cem-utils";
+import type { Attribute, Component } from "./types";
 
 describe("getComponentDetailsTemplate", () => {
   test("should return a string with component details", () => {
@@ -86,6 +88,40 @@ describe("getComponentDetailsTemplate", () => {
     expect(result.includes("## Attributes & Properties")).toBeFalsy();
     expect(result.includes("## Methods")).toBeFalsy();
     expect(result.includes("## Slots")).toBeFalsy();
+  });
+
+  test("should not mutate the component it renders", () => {
+    // Arrange
+    const component = {
+      name: "X",
+      tagName: "x-y",
+      customElement: true as const,
+      description: "d",
+      members: [
+        {
+          kind: "method",
+          name: "focus",
+          privacy: "public",
+          return: { type: { text: "void" } },
+        },
+        {
+          kind: "field",
+          name: "size",
+          privacy: "public",
+          type: { text: "Size" },
+          parsedType: { text: "'sm' | 'lg'" },
+        },
+      ],
+    } as unknown as Component;
+    const before = structuredClone(component);
+
+    // Act
+    getComponentDetailsTemplate(component, {
+      order: ["methods", "properties"] as ApiOrderOption[],
+    });
+
+    // Assert
+    expect(component).toEqual(before);
   });
 });
 
@@ -180,6 +216,33 @@ describe("altType", () => {
     });
     expect(perMember).toContain("boolean | undefined");
     expect(perMember).toContain("'sm' | 'lg'");
+  });
+
+  test("`getApiByOrderOption` `attributes` branch leaves the input untouched", () => {
+    // Arrange
+    const component = {
+      name: "X",
+      tagName: "x-y",
+      customElement: true as const,
+      attributes: [
+        {
+          name: "fluid",
+          fieldName: "fluid",
+          type: { text: "boolean | undefined" },
+          parsedType: { text: "false | true | undefined" },
+        },
+      ],
+    };
+    const before = structuredClone(component);
+
+    // Act
+    const attrs = getApiByOrderOption(component, "attributes", "parsedType");
+
+    // Assert
+    expect(component).toEqual(before);
+    expect((attrs as Attribute[])[0]?.type?.text).toBe(
+      "false | true | undefined"
+    );
   });
 });
 

@@ -206,23 +206,21 @@ export function getComponentPublicProperties<T extends Property>(
     return [];
   }
 
-  component.members?.forEach((member) => {
-    if (member.kind === "field") {
-      const alt = getAltType(member, altType);
-      if (alt) {
-        member.type = alt;
-      }
-    }
-  });
-
-  return (component?.members?.filter(
-    (member) =>
-      member.kind === "field" &&
-      member.privacy !== "private" &&
-      member.privacy !== "protected" &&
-      !member.static &&
-      !member.name.startsWith("#")
-  ) || []) as T[];
+  return (
+    component?.members
+      ?.filter(
+        (member) =>
+          member.kind === "field" &&
+          member.privacy !== "private" &&
+          member.privacy !== "protected" &&
+          !member.static &&
+          !member.name.startsWith("#")
+      )
+      .map((member) => {
+        const alt = getAltType(member, altType);
+        return alt ? { ...member, type: alt } : member;
+      }) || []
+  ) as T[];
 }
 
 /**
@@ -255,12 +253,13 @@ export function getComponentPublicMethods<T extends Method>(
           !member.name.startsWith("#")
       ) as Method[]
     )?.map((m) => {
-      // reconstruct method type
-      m.type = {
-        text: `${m.name}(${m.parameters?.map((p) => getParameter(p)).join(", ") || ""}) => ${m.return?.type?.text || "void"}`,
-      };
-
-      return m;
+      // reconstruct method type on a copy so the source member is untouched
+      return {
+        ...m,
+        type: {
+          text: `${m.name}(${m.parameters?.map((p) => getParameter(p)).join(", ") || ""}) => ${m.return?.type?.text || "void"}`,
+        },
+      } as T;
     }) as T[]
   );
 }

@@ -171,13 +171,12 @@ export function getApiByOrderOption(
 
   switch (api) {
     case "attributes":
-      component.attributes?.forEach((attr) => {
-        const alt = getAltType(attr, altType);
-        if (alt) {
-          attr.type = alt;
-        }
-      });
-      return component.attributes || ([] as Attribute[]);
+      return (
+        component.attributes?.map((attr) => {
+          const alt = getAltType(attr, altType);
+          return alt ? { ...attr, type: alt } : attr;
+        }) || ([] as Attribute[])
+      );
     case "properties":
       return (
         getComponentPublicProperties(component, altType) || ([] as Property[])
