@@ -73,6 +73,42 @@ describe("getAlComponents", () => {
     expect(components).toHaveLength(1);
     expect(components[0]?.name).toBe("MyButton");
   });
+
+  test("does not mutate declarations while adding component paths", () => {
+    const manifest = {
+      schemaVersion: "2.1.0",
+      modules: [
+        {
+          kind: "javascript-module",
+          path: "src/button.ts",
+          declarations: [
+            {
+              kind: "class",
+              name: "Button",
+              customElement: true,
+              tagName: "x-button",
+              attributes: [{ name: "disabled" }],
+            },
+          ],
+          exports: [
+            {
+              kind: "custom-element-definition",
+              name: "x-button",
+              declaration: { name: "Button", module: "src/button.ts" },
+            },
+          ],
+        },
+      ],
+    };
+
+    const components = getAllComponents(manifest);
+
+    expect(components[0]).toHaveProperty("modulePath", "src/button.ts");
+    expect(components[0]).toHaveProperty("definitionPath", "src/button.ts");
+    expect(manifest.modules[0].declarations[0]).not.toHaveProperty("modulePath");
+    expect(manifest.modules[0].declarations[0]).not.toHaveProperty("definitionPath");
+    expect(manifest.modules[0].declarations[0].attributes?.[0]).not.toHaveProperty("propName");
+  });
 });
 
 describe("getComponentByClassName", () => {
