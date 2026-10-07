@@ -10,7 +10,7 @@ export function isObject(item: unknown) {
 /**
  * Merges the content of two objects
  * @param target object being merged into
- * @param sources data to merge into the target
+ * @param source data to merge into the target
  * @returns object
  */
 export function deepMerge<T = object>(target: unknown, source: unknown): T {
@@ -24,22 +24,18 @@ export function deepMerge<T = object>(target: unknown, source: unknown): T {
 
   const targetObj = target as Record<string, unknown>;
   const sourceObj = source as Record<string, unknown>;
+  const result: Record<string, unknown> = { ...targetObj };
 
   for (const key of Object.keys(source)) {
     if (sourceObj[key] instanceof Array) {
-      if (!targetObj[key]) {
-        targetObj[key] = [];
-      }
-      targetObj[key] = (targetObj[key] as []).concat(sourceObj[key] as []);
+      const targetValue = result[key] instanceof Array ? (result[key] as unknown[]) : [];
+      result[key] = targetValue.concat(sourceObj[key] as unknown[]);
     } else if (sourceObj[key] instanceof Object) {
-      if (!targetObj[key]) {
-        targetObj[key] = {};
-      }
-      targetObj[key] = deepMerge(targetObj[key], sourceObj[key]);
+      result[key] = deepMerge(result[key], sourceObj[key]);
     } else {
-      targetObj[key] = sourceObj[key];
+      result[key] = sourceObj[key];
     }
   }
 
-  return targetObj as T;
+  return result as T;
 }

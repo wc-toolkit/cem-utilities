@@ -1,8 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   getComponentPublicMethods,
   getComponentPublicProperties,
+  getAltType,
 } from "./cem-utils";
+import type { AltTypeOption } from "./cem-utils";
 import { deepMerge } from "./deep-merge";
 import type {
   Attribute,
@@ -56,10 +57,14 @@ export type ComponentDescriptionOptions = {
    */
   descriptionSrc?: "description" | "summary" | (string & {});
   /**
-   * The type of the component description
+   * The type preference for members. Defaults to `"parsedType"`.
+   * Pass `false` to always use `member.type`, or a function to resolve the
+   * type text per member (`undefined` falls back to `member.type`).
+   * For design systems, `preferParsedLiteralUnion` provides a policy that
+   * prefers `parsedType` only for literal unions.
    * @default "parsedType"
    */
-  altType?: string;
+  altType?: AltTypeOption;
   /**
    * The options for each component API
    */
@@ -77,7 +82,63 @@ export type ComponentDescriptionOptions = {
   };
   /** The section heading level to use for the component details sections */
   sectionHeadingLevel?: number;
+  /**
+   * How inherited members are rendered in the component details template.
+   * - `inline` (default): inherited members are mixed in with own members
+   * - `separate`: own members are rendered first, inherited members under
+   *   their own `Inherited <heading>` section
+   * - `omit`: inherited members are excluded from the rendered output
+   * @default "inline"
+   */
+  inherited?: "inline" | "separate" | "omit";
 };
+
+/** The options for `getAttrsAndProps` */
+export type GetAttrsAndPropsOptions = {
+  /**
+   * The type preference for members. Defaults to `"parsedType"`.
+   * @default "parsedType"
+   */
+  altType?: AltTypeOption;
+  /**
+   * When `true`, the result is partitioned into own and inherited members
+   * instead of a single flat list.
+   * @default false
+   */
+  partition?: boolean;
+};
+
+/** A list of members partitioned into own and inherited buckets */
+export type AttrsAndPropsPartition = {
+  /** Members that are declared on the component itself */
+  own: AttributeAndProperty[];
+  /** Members inherited from a base class */
+  inherited: AttributeAndProperty[];
+};
+
+/**
+ * Partitions a list of members into own and inherited buckets based on the
+ * presence of an `inheritedFrom` reference.
+ * @param rows the members to partition
+ * @returns {object} the own and inherited members, in their original order
+ */
+export function partitionByInherited<T extends readonly unknown[]>(rows: T): {
+  own: T[number][];
+  inherited: T[number][];
+} {
+  const own: T[number][] = [];
+  const inherited: T[number][] = [];
+
+  for (const row of rows) {
+    if ((row as { inheritedFrom?: unknown } | null)?.inheritedFrom) {
+      inherited.push(row);
+    } else {
+      own.push(row);
+    }
+  }
+
+  return { own, inherited };
+}
 
 /**
  * Gets the template for a component's description based on the options provided.
@@ -95,10 +156,15 @@ export function getComponentDetailsTemplate(
     throw new Error("Component is required");
   }
 
+  const { order, ...apiOptionsInput } = options || {};
   const apiOptions = deepMerge<ComponentDescriptionOptions>(
     defaultDescriptionOptions,
-    options,
+    apiOptionsInput,
   );
+
+  // A caller-supplied `order` replaces the default outright instead of being
+  // appended to it, and is never merged into the shared `defaultDescriptionOptions`.
+  const sectionOrder = order ?? defaultDescriptionOptions.order;
 
   let description = getMainComponentDescription(
     component,
@@ -109,7 +175,9 @@ export function getComponentDetailsTemplate(
     apiOptions.sectionHeadingLevel || 2,
   );
 
-  apiOptions.order?.forEach((key) => {
+  const inheritedMode = apiOptions.inherited ?? "inline";
+
+  sectionOrder?.forEach((key) => {
     const componentContent = getApiByOrderOption(
       component,
       key,
@@ -117,12 +185,43 @@ export function getComponentDetailsTemplate(
     );
     const api = apiOptions.apis ? apiOptions.apis[key] : undefined;
 
-    if (api && componentContent?.length) {
+    if (!api || !componentContent?.length) {
+      return;
+    }
+
+    if (inheritedMode === "separate") {
+      const { own, inherited } = partitionByInherited(componentContent);
+
+      if (own.length) {
+        description += `\n\n${headingLevel} ${api.heading}`;
+        description += api.description ? `\n\n${api.description}` : "";
+        description += api.template
+          ? // @ts-expect-error componentContent takes many shapes
+            `\n\n${api.template(own)}`
+          : "";
+      }
+
+      if (inherited.length) {
+        description += `\n\n${headingLevel} Inherited ${api.heading}`;
+        description += api.template
+          ? // @ts-expect-error componentContent takes many shapes
+            `\n\n${api.template(inherited)}`
+          : "";
+      }
+      return;
+    }
+
+    const content =
+      inheritedMode === "omit"
+        ? partitionByInherited(componentContent).own
+        : componentContent;
+
+    if (content.length) {
       description += `\n\n${headingLevel} ${api.heading}`;
       description += api.description ? `\n\n${api.description}` : "";
       description += api.template
         ? // @ts-expect-error componentContent takes many shapes
-          `\n\n${api.template(componentContent)}`
+          `\n\n${api.template(content)}`
         : "";
     }
   });
@@ -146,7 +245,7 @@ export function getComponentDetailsTemplate(
 export function getApiByOrderOption(
   component?: Component,
   api?: ApiOrderOption,
-  altType?: string,
+  altType?: AltTypeOption,
 ):
   | Attribute[]
   | Property[]
@@ -163,10 +262,12 @@ export function getApiByOrderOption(
 
   switch (api) {
     case "attributes":
-      component.attributes?.forEach((attr) => {
-        attr.type = altType ? (attr as any)[altType] || attr.type : attr.type;
-      });
-      return component.attributes || ([] as Attribute[]);
+      return (
+        component.attributes?.map((attr) => {
+          const alt = getAltType(attr, altType);
+          return alt ? { ...attr, type: alt } : attr;
+        }) || ([] as Attribute[])
+      );
     case "properties":
       return (
         getComponentPublicProperties(component, altType) || ([] as Property[])
@@ -232,12 +333,42 @@ export function getMainComponentDescription(
  * @returns {AttributeAndProperty[]} An array of attributes and properties
  */
 export function getAttrsAndProps(
+  component?: Component
+): AttributeAndProperty[];
+/**
+ * Gets a combined list of attributes and public properties (including those not associated with an attribute) for a component.
+ * @param {Component} component
+ * @param {AltTypeOption} altType the type preference for members
+ * @returns {AttributeAndProperty[]} An array of attributes and properties
+ */
+export function getAttrsAndProps(
   component?: Component,
-  altType = "parsedType",
-): AttributeAndProperty[] {
+  altType?: AltTypeOption
+): AttributeAndProperty[];
+/**
+ * Gets a combined list of attributes and public properties (including those not associated with an attribute) for a component.
+ * When `options.partition` is `true`, the result is partitioned into own and inherited members.
+ * @param {Component} component
+ * @param {GetAttrsAndPropsOptions} options
+ * @returns {AttributeAndProperty[] | AttrsAndPropsPartition} An array of attributes and properties, or a partition of them
+ */
+export function getAttrsAndProps(
+  component?: Component,
+  options?: GetAttrsAndPropsOptions
+): AttributeAndProperty[] | AttrsAndPropsPartition;
+export function getAttrsAndProps(
+  component?: Component,
+  optionsOrAltType: AltTypeOption | GetAttrsAndPropsOptions = "parsedType"
+): AttributeAndProperty[] | AttrsAndPropsPartition {
   if (!component) {
     return [];
   }
+
+  const options: GetAttrsAndPropsOptions =
+    typeof optionsOrAltType === "object" && optionsOrAltType !== null
+      ? optionsOrAltType
+      : { altType: optionsOrAltType };
+  const altType = options.altType ?? "parsedType";
 
   const attributes =
     component.attributes?.map((attr) => {
@@ -247,7 +378,7 @@ export function getAttrsAndProps(
         summary: attr.summary,
         description: attr.description,
         inheritedFrom: attr.inheritedFrom,
-        type: (attr as any)[altType] || attr.type,
+        type: getAltType(attr, altType) || attr.type,
         default: attr.default,
         deprecated: attr.deprecated,
         static: false,
@@ -266,7 +397,7 @@ export function getAttrsAndProps(
         summary: prop.summary,
         description: prop.description,
         inheritedFrom: prop.inheritedFrom,
-        type: (prop as any)[altType] || prop.type,
+        type: getAltType(prop, altType) || prop.type,
         default: prop.default,
         deprecated: prop.deprecated,
         static: prop.static,
@@ -274,7 +405,9 @@ export function getAttrsAndProps(
         readonly: prop.readonly,
       };
     });
-  return [...attributes, ...properties];
+  const rows = [...attributes, ...properties];
+
+  return options.partition ? partitionByInherited(rows) : rows;
 }
 
 /**
@@ -284,7 +417,7 @@ export function getAttrsAndProps(
  */
 export function getPropertyOnlyFields(
   component?: Component,
-  altType?: string,
+  altType?: AltTypeOption,
 ): Property[] {
   if (!component) {
     return [];
@@ -455,12 +588,12 @@ export const defaultDescriptionOptions: ComponentDescriptionOptions = {
 };
 
 /**
- * Returns a Markdown heading string for the given level and text.
+ * Returns a Markdown heading string for the given level and optional text.
  * @param level The heading level (1-6)
  * @param text The heading text
  * @returns {string} The Markdown heading
  */
-export function createMarkdownHeading(level: number): string {
+export function createMarkdownHeading(level: number, text?: string): string {
   const safeLevel = Math.min(Math.max(level, 1), 6);
-  return "#".repeat(safeLevel);
+  return `${"#".repeat(safeLevel)}${text ? ` ${text}` : ""}`;
 }
