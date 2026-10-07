@@ -1,5 +1,11 @@
 # @wc-toolkit/cem-utilities
 
+## 1.6.1
+
+### Patch Changes
+
+- 11e65b4: Keep component path metadata from mutating the source Custom Elements Manifest.
+
 ## 1.6.0
 
 ### Minor Changes
